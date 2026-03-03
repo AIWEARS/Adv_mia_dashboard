@@ -1,0 +1,964 @@
+{
+    "exportFormatVersion": 2,
+    "exportTime": "2026-03-02 17:28:11",
+    "containerVersion": {
+        "path": "accounts/6341256602/containers/244661607/versions/0",
+        "accountId": "6341256602",
+        "containerId": "244661607",
+        "containerVersionId": "0",
+        "container": {
+            "path": "accounts/6341256602/containers/244661607",
+            "accountId": "6341256602",
+            "containerId": "244661607",
+            "name": "itsmia.it",
+            "publicId": "GTM-NHH9WPMC",
+            "usageContext": [
+                "WEB"
+            ],
+            "fingerprint": "1772046649649",
+            "tagManagerUrl": "https://tagmanager.google.com/#/container/accounts/6341256602/containers/244661607/workspaces?apiLink=container",
+            "features": {
+                "supportUserPermissions": true,
+                "supportEnvironments": true,
+                "supportWorkspaces": true,
+                "supportGtagConfigs": false,
+                "supportBuiltInVariables": true,
+                "supportClients": false,
+                "supportFolders": true,
+                "supportTags": true,
+                "supportTemplates": true,
+                "supportTriggers": true,
+                "supportVariables": true,
+                "supportVersions": true,
+                "supportZones": true,
+                "supportTransformations": false
+            },
+            "tagIds": [
+                "GTM-NHH9WPMC"
+            ]
+        },
+        "tag": [
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "4",
+                "name": "GAds - Conversion Linker",
+                "type": "gclidw",
+                "parameter": [
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableCrossDomain",
+                        "value": "true"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableUrlPassthrough",
+                        "value": "false"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "acceptIncoming",
+                        "value": "true"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "linkerDomains",
+                        "value": "itsmia.it, app.miafashion.it"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableCookieOverrides",
+                        "value": "false"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "formDecoration",
+                        "value": "false"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "urlPosition",
+                        "value": "query"
+                    }
+                ],
+                "fingerprint": "1772193002973",
+                "firingTriggerId": [
+                    "2147479553"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NOT_SET"
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "5",
+                "name": "GAds - Conv - Tailor Preventivo (mailto)",
+                "type": "awct",
+                "parameter": [
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableNewCustomerReporting",
+                        "value": "false"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableConversionLinker",
+                        "value": "true"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableProductReporting",
+                        "value": "false"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableShippingData",
+                        "value": "false"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "conversionId",
+                        "value": "17330152664"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "conversionLabel",
+                        "value": "p3dhCJLO-f8bENjJ1MdA"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "rdp",
+                        "value": "false"
+                    }
+                ],
+                "fingerprint": "1772189681655",
+                "firingTriggerId": [
+                    "3"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NOT_SET"
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "6",
+                "name": "GAds - Tag Google (AW-17330152664)",
+                "type": "googtag",
+                "parameter": [
+                    {
+                        "type": "TEMPLATE",
+                        "key": "tagId",
+                        "value": "AW-17330152664"
+                    }
+                ],
+                "fingerprint": "1772189843570",
+                "firingTriggerId": [
+                    "2147479573"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NOT_SET"
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "8",
+                "name": "GAds – Conv – Go to app (click)",
+                "type": "awct",
+                "parameter": [
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableNewCustomerReporting",
+                        "value": "false"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableConversionLinker",
+                        "value": "true"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableProductReporting",
+                        "value": "false"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableShippingData",
+                        "value": "false"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "conversionId",
+                        "value": "17330152664"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "conversionLabel",
+                        "value": "c5rKCM-d5_8bENjJ1MdA"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "rdp",
+                        "value": "false"
+                    }
+                ],
+                "fingerprint": "1772190641598",
+                "firingTriggerId": [
+                    "7"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NOT_SET"
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "10",
+                "name": "GAds – Conv – Webapp Sign up",
+                "type": "awct",
+                "parameter": [
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableNewCustomerReporting",
+                        "value": "false"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableConversionLinker",
+                        "value": "true"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableProductReporting",
+                        "value": "false"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableShippingData",
+                        "value": "false"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "conversionId",
+                        "value": "17330152664"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "conversionLabel",
+                        "value": "VXofCK_u8f8bENjJ1MdA"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "rdp",
+                        "value": "false"
+                    }
+                ],
+                "fingerprint": "1772190956103",
+                "firingTriggerId": [
+                    "9"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NOT_SET"
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "15",
+                "name": "GAds – Conv – Subscription purchase",
+                "type": "awct",
+                "parameter": [
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableNewCustomerReporting",
+                        "value": "false"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableConversionLinker",
+                        "value": "true"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "orderId",
+                        "value": "{{DLV - transaction_id}}"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableProductReporting",
+                        "value": "false"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "conversionValue",
+                        "value": "{{DLV - value}}"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "enableShippingData",
+                        "value": "false"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "conversionId",
+                        "value": "17330152664"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "currencyCode",
+                        "value": "{{DLV - currency}}"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "conversionLabel",
+                        "value": "YnxrCNq99f8bENJj1MdA"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "rdp",
+                        "value": "false"
+                    }
+                ],
+                "fingerprint": "1772192619126",
+                "firingTriggerId": [
+                    "14"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NOT_SET"
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "17",
+                "name": "Tag GA4",
+                "type": "googtag",
+                "parameter": [
+                    {
+                        "type": "TEMPLATE",
+                        "key": "tagId",
+                        "value": "G-38XTQRE585"
+                    }
+                ],
+                "fingerprint": "1772193719802",
+                "firingTriggerId": [
+                    "2147479573"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NOT_SET"
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "20",
+                "name": "GCM - Default (Denied) - Global",
+                "type": "html",
+                "priority": {
+                    "type": "INTEGER",
+                    "value": "999"
+                },
+                "parameter": [
+                    {
+                        "type": "TEMPLATE",
+                        "key": "html",
+                        "value": "<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n\n  gtag('consent', 'default', {\n    'ad_storage': 'denied',\n    'analytics_storage': 'denied',\n    'ad_user_data': 'denied',\n    'ad_personalization': 'denied',\n    'wait_for_update': 1500\n  });\n</script>"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "supportDocumentWrite",
+                        "value": "false"
+                    }
+                ],
+                "fingerprint": "1772275525579",
+                "firingTriggerId": [
+                    "2147479572"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NOT_SET"
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "22",
+                "name": "Meta - Pixel Base (MIA)",
+                "type": "html",
+                "parameter": [
+                    {
+                        "type": "TEMPLATE",
+                        "key": "html",
+                        "value": "<script>\n  !function(f,b,e,v,n,t,s){\n    if(f.fbq)return;n=f.fbq=function(){n.callMethod?\n    n.callMethod.apply(n,arguments):n.queue.push(arguments)};\n    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';\n    n.queue=[];t=b.createElement(e);t.async=!0;\n    t.src=v;s=b.getElementsByTagName(e)[0];\n    s.parentNode.insertBefore(t,s)\n  }(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');\n\n  fbq('init', '665641202926753');\n  fbq('track', 'PageView');\n</script>"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "supportDocumentWrite",
+                        "value": "false"
+                    }
+                ],
+                "fingerprint": "1772277446797",
+                "firingTriggerId": [
+                    "21",
+                    "2147479553"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NEEDED",
+                    "consentType": {
+                        "type": "LIST",
+                        "list": [
+                            {
+                                "type": "TEMPLATE",
+                                "value": "ad_storage"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "23",
+                "name": "Meta - Lead (mailto preventivo)",
+                "type": "html",
+                "parameter": [
+                    {
+                        "type": "TEMPLATE",
+                        "key": "html",
+                        "value": "<script>\n  if (typeof fbq === 'function') {\n    fbq('track', 'Lead');\n  }\n</script>"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "supportDocumentWrite",
+                        "value": "false"
+                    }
+                ],
+                "fingerprint": "1772277514483",
+                "firingTriggerId": [
+                    "3"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NEEDED",
+                    "consentType": {
+                        "type": "LIST",
+                        "list": [
+                            {
+                                "type": "TEMPLATE",
+                                "value": "ad_storage"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "24",
+                "name": "iubenda Privacy Controls and Cookie Solution",
+                "type": "cvt_KFGZD",
+                "parameter": [
+                    {
+                        "type": "TEMPLATE",
+                        "key": "csChannel",
+                        "value": "current"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "embedCS",
+                        "value": "auto"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "csConfigurationJson",
+                        "value": "{\"siteId\":4050339,\"cookiePolicyId\":37417347,\"lang\":\"it\",\"storage\":{\"useSiteId\":true}}"
+                    }
+                ],
+                "fingerprint": "1772288036354",
+                "firingTriggerId": [
+                    "2147479572"
+                ],
+                "consentSettings": {
+                    "consentStatus": "NOT_SET"
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "tagId": "26",
+                "name": "Microsoft Clarity - Official",
+                "type": "cvt_MQDKZ",
+                "parameter": [
+                    {
+                        "type": "TEMPLATE",
+                        "key": "sessionId",
+                        "value": "{{Analytics Session ID}}"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "projectId",
+                        "value": "vowde8hphb"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "userId",
+                        "value": "{{Analytics Client ID}}"
+                    }
+                ],
+                "fingerprint": "1772359096190",
+                "firingTriggerId": [
+                    "2147479553"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "consentSettings": {
+                    "consentStatus": "NOT_SET"
+                }
+            }
+        ],
+        "trigger": [
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "triggerId": "3",
+                "name": "TRG - Mailto - Tailor Preventivo",
+                "type": "LINK_CLICK",
+                "filter": [
+                    {
+                        "type": "CONTAINS",
+                        "parameter": [
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg0",
+                                "value": "{{Click URL}}"
+                            },
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg1",
+                                "value": "mailto:info@itsmia.it"
+                            }
+                        ]
+                    }
+                ],
+                "waitForTags": {
+                    "type": "BOOLEAN",
+                    "value": "false"
+                },
+                "checkValidation": {
+                    "type": "BOOLEAN",
+                    "value": "false"
+                },
+                "waitForTagsTimeout": {
+                    "type": "TEMPLATE",
+                    "value": "2000"
+                },
+                "uniqueTriggerId": {
+                    "type": "TEMPLATE"
+                },
+                "fingerprint": "1772189175641"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "triggerId": "7",
+                "name": "TRG – Click – Go to app",
+                "type": "LINK_CLICK",
+                "filter": [
+                    {
+                        "type": "CONTAINS",
+                        "parameter": [
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg0",
+                                "value": "{{Click URL}}"
+                            },
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg1",
+                                "value": "app.miafashion.it"
+                            }
+                        ]
+                    }
+                ],
+                "waitForTags": {
+                    "type": "BOOLEAN",
+                    "value": "false"
+                },
+                "checkValidation": {
+                    "type": "BOOLEAN",
+                    "value": "false"
+                },
+                "waitForTagsTimeout": {
+                    "type": "TEMPLATE",
+                    "value": "2000"
+                },
+                "uniqueTriggerId": {
+                    "type": "TEMPLATE"
+                },
+                "fingerprint": "1772190576586"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "triggerId": "9",
+                "name": "TRG – sign_up (webapp)",
+                "type": "CUSTOM_EVENT",
+                "customEventFilter": [
+                    {
+                        "type": "EQUALS",
+                        "parameter": [
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg0",
+                                "value": "{{_event}}"
+                            },
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg1",
+                                "value": "sign_up"
+                            }
+                        ]
+                    }
+                ],
+                "filter": [
+                    {
+                        "type": "CONTAINS",
+                        "parameter": [
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg0",
+                                "value": "{{Page Hostname}}"
+                            },
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg1",
+                                "value": "app.miafashion.it"
+                            }
+                        ]
+                    }
+                ],
+                "fingerprint": "1772190880146"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "triggerId": "14",
+                "name": "TRG – purchase (webapp)",
+                "type": "CUSTOM_EVENT",
+                "customEventFilter": [
+                    {
+                        "type": "EQUALS",
+                        "parameter": [
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg0",
+                                "value": "{{_event}}"
+                            },
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg1",
+                                "value": "purchase"
+                            }
+                        ]
+                    }
+                ],
+                "filter": [
+                    {
+                        "type": "CONTAINS",
+                        "parameter": [
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg0",
+                                "value": "{{Page Hostname}}"
+                            },
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg1",
+                                "value": "app.miafashion.it"
+                            }
+                        ]
+                    }
+                ],
+                "fingerprint": "1772192492063"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "triggerId": "21",
+                "name": "EV - gtm.consentUpdate",
+                "type": "CUSTOM_EVENT",
+                "customEventFilter": [
+                    {
+                        "type": "EQUALS",
+                        "parameter": [
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg0",
+                                "value": "{{_event}}"
+                            },
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg1",
+                                "value": "gtm.consentUpdate"
+                            }
+                        ]
+                    }
+                ],
+                "fingerprint": "1772276015956"
+            }
+        ],
+        "variable": [
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "variableId": "11",
+                "name": "DLV - value",
+                "type": "v",
+                "parameter": [
+                    {
+                        "type": "INTEGER",
+                        "key": "dataLayerVersion",
+                        "value": "2"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "setDefaultValue",
+                        "value": "false"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "name",
+                        "value": "value"
+                    }
+                ],
+                "fingerprint": "1772192246421",
+                "formatValue": {}
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "variableId": "12",
+                "name": "DLV - currency",
+                "type": "v",
+                "parameter": [
+                    {
+                        "type": "INTEGER",
+                        "key": "dataLayerVersion",
+                        "value": "2"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "setDefaultValue",
+                        "value": "false"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "name",
+                        "value": "transaction_id"
+                    }
+                ],
+                "fingerprint": "1772192269969",
+                "formatValue": {}
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "variableId": "13",
+                "name": "DLV - transaction_id",
+                "type": "v",
+                "parameter": [
+                    {
+                        "type": "INTEGER",
+                        "key": "dataLayerVersion",
+                        "value": "2"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "setDefaultValue",
+                        "value": "false"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "name",
+                        "value": "transaction_id"
+                    }
+                ],
+                "fingerprint": "1772192318352",
+                "formatValue": {}
+            }
+        ],
+        "builtInVariable": [
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "PAGE_URL",
+                "name": "Page URL"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "PAGE_HOSTNAME",
+                "name": "Page Hostname"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "PAGE_PATH",
+                "name": "Page Path"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "REFERRER",
+                "name": "Referrer"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "EVENT",
+                "name": "Event"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "CLICK_ELEMENT",
+                "name": "Click Element"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "CLICK_CLASSES",
+                "name": "Click Classes"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "CLICK_ID",
+                "name": "Click ID"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "CLICK_TARGET",
+                "name": "Click Target"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "CLICK_URL",
+                "name": "Click URL"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "CLICK_TEXT",
+                "name": "Click Text"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "FORM_CLASSES",
+                "name": "Form Classes"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "FORM_ID",
+                "name": "Form ID"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "FORM_URL",
+                "name": "Form URL"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "ANALYTICS_CLIENT_ID",
+                "name": "Analytics Client ID"
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "type": "ANALYTICS_SESSION_ID",
+                "name": "Analytics Session ID"
+            }
+        ],
+        "fingerprint": "1772472491315",
+        "tagManagerUrl": "https://tagmanager.google.com/#/versions/accounts/6341256602/containers/244661607/versions/0?apiLink=version",
+        "customTemplate": [
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "templateId": "18",
+                "name": "iubenda Privacy Controls and Cookie Solution",
+                "fingerprint": "1772271144208",
+                "templateData": "___TERMS_OF_SERVICE___\n\nBy creating or modifying this file you agree to Google Tag Manager's Community\nTemplate Gallery Developer Terms of Service available at\nhttps://developers.google.com/tag-manager/gallery-tos (or such other URL as\nGoogle may provide), as modified from time to time.\n\n\n___INFO___\n\n{\n  \"displayName\": \"iubenda Privacy Controls and Cookie Solution\",\n  \"description\": \"Cookie consent management for the ePrivacy, GDPR and CCPA.\",\n  \"categories\": [\n    \"TAG_MANAGEMENT\",\n    \"PERSONALIZATION\"\n  ],\n  \"id\": \"cvt_KFGZD\",\n  \"type\": \"TAG\",\n  \"version\": 1,\n  \"brand\": {\n    \"thumbnail\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAAAXNSR0IArs4c6QAABklJREFUeF7tnU9QHEUUxr/pYRU1loGQEk/CKaQ8CJkh4kmosko8iSfxJJySlKXmzw4xJ/Fkwm5MPKRMTuBJPBlPYnkInsSwG/BgRU4mp2CZmKCm3AjTY/USUiy17PRs92w/qnrOr/ttf7953TOvX886sJdRBRyj3q1zWACGbwILwAIwrIBh9zYCLADDChh2byPAAjCsgGH3NgIsAMMKGHZvI8ACMKyAYfc2AiwAwwoYdr/zImBhcjdW7/bBXWtHxNrL+jl8GWHTMjItc+gZvWdY00TudwaA3yabcffOCCI+DDh9CNnjVUfp8gdANAeHTaNlzxQ6R0uJ1DBgTB9AcWIEcMYRsucT6ePym0A0Dm9sKlG7BhvTBSDu+ju3p8HZG0qaMP4N9rQNU40GmgB+mWhHyZlByF5UEn+jsct/RnM0iBfGlrX0p7ETegCuTDbj6duz4OwljeMEGP8Jf7f1Y4DWukAPQDE/jdB5S6v4jyIh+gpedjiVvuvslBaAq58OAtG3dY5FspnzOg4en5E0Tt2MFoBiblHbvL+ddGI98ILu1JWVdEAHQOHMEHjT15K/W82Mrb0J/+RltU70tCYEIDcFzt7RM6yYXhj/An4w0hBfMU4IAcjfA3eekRZFiAj+8C5mQ4ngsWgFfna3tK8UDWkAKFzqAv/nuvQ4m6IjOJC9WGF/LX8Ya87n0n2wXfvhH/pV2j4lQxoA5nP9iNgVqTHWWkSTLOIOH0BvMCvlM0UjGgCu5Yaxxr6UGqfLL8ELDle1LeYuImSHpPpp4m/jQDAtZZui0c4DIHI7fjBUVZNC7rJ07sgC2CRhkilILKBPrXZj/6kbFRCuf9KB+5lF6YXcTkGb5Eu6CIt1YJczjH3Z9UVUtHf+mk70EmcX4S2TSCG/DO48Kz3duhyIsFS2d7APIZNuChb9Dj+7vptm+KKxBggRkiygqqLZF7EqCjYkEffQL5H5fz14KV2F3Jz2fYCt4xP7An7QR2XYtAAkeRqqR0GxbnCQeAHb+Pm0AJTXgonzCN0P6tE3to0bfgZv7GisXQMN6AFYhzCL0H1Fuw57W1vQSatuiCqAEYTupHYAaH4OB98ltTFPFEDuKEJ2TjsAIi9fm8dFE8B8bhwR+0g7AOexAfS+ZzwDSh9AWi9lhLYi6T4FlRfhlEpT3HCUWqkizSmokJ8Bd15LNAWJkUQxLVx+DF5wPlG/KRvTBJBkZ0sIJFLUjijgRe2Fm+EM/BMfpqxpou6pArghXQ3NsAI37Mdapg0R/77m6GvtpiWSTZ8xTQAFyQqJ9Tt/EN6JOcyfezUWQK3dNH2aJuqJJoBiLorN7wvxo2jo0ca6DAA3/AHeWH8ihVI2pgdAlKbfd2/FjntrSlkKAK2yRDFGegCW8l1YcWrXCImsphdU/nY5ADfhBR2xcBtoQA9A8WwfQvwYs5jWC+ABvKC5gfrGuqIHQKZIt94IEHLsbX2C0nElegDEoby4TKgKgMx/nejZUtISe5+mZ0AQgEQmVAlA2IOescX0JE3WMz0AMplQFQCENuRpPgXJZEJVABDLiNKLAJlMqAqAaqXtyWYNrdYEAUjsB6sAYNEp+NnTWlVU6IwgAImDeioAiFVGUAQQnwlVAUCoLJHmIiyTCVUDsP35AoWppN6mtCJAfKDjjz//jR2MCgBiGVFaAK5eaAdK8ZlQFQCML8EPumIhN8iAFoBCvgs8JhMqhFECQOdsAL01QLY4VwWA+KoWoYwosQiQ/FyBCgBx22VaW6h8W44WAJlMqOoUVAbwZCd6jlQe8mvQnL/VDTEAEpnQjRGIGp+Ky+1AGMmVtbuZl+G9P2dI8wq3tAAUzp4Gx8n0haHzzSBaAGQyoTroEDmkTe8pSCYTqgMAoRJFYhEgkQnVAcDhH6M3GNfRlWofxABIZEJVR1x+iqJzVowagPhMqBYAdL6eSA1AadvvQusQfqMPFn0HPzuos8t6+6IDQDYTWu9IN7cjdFibDgDZmlAdAMSHvYmUKNIBsHChG6ulBR36xvZhP9pXRSLZTGisuhIG1ZJ5Es3SMKETAWJ04t8xGnUR+acNWgAaJT4hPxaAYRgWgAVgWAHD7m0EWACGFTDs3kaABWBYAcPubQRYAIYVMOzeRoAFYFgBw+5tBFgAhhUw7P5/kg1mf/kim+wAAAAASUVORK5CYII\\u003d\",\n    \"displayName\": \"iubenda\",\n    \"id\": \"github.com_iubenda\"\n  },\n  \"containerContexts\": [\n    \"WEB\"\n  ]\n}\n\n\n___TEMPLATE_PARAMETERS___\n\n[\n  {\n    \"type\": \"GROUP\",\n    \"name\": \"defaultConsent\",\n    \"displayName\": \"Purpose default consents\",\n    \"groupStyle\": \"ZIPPY_OPEN\",\n    \"subParams\": [\n      {\n        \"type\": \"SELECT\",\n        \"name\": \"purposeBasic\",\n        \"displayName\": \"Basic functionalities\",\n        \"macrosInSelect\": false,\n        \"selectItems\": [\n          {\n            \"value\": \"denied\",\n            \"displayValue\": \"Denied\"\n          },\n          {\n            \"value\": \"granted\",\n            \"displayValue\": \"Granted\"\n          }\n        ],\n        \"simpleValueType\": true,\n        \"defaultValue\": \"denied\"\n      },\n      {\n        \"type\": \"SELECT\",\n        \"name\": \"purposeExperience\",\n        \"displayName\": \"Experience enhancement\",\n        \"macrosInSelect\": false,\n        \"selectItems\": [\n          {\n            \"value\": \"denied\",\n            \"displayValue\": \"Denied\"\n          },\n          {\n            \"value\": \"granted\",\n            \"displayValue\": \"Granted\"\n          }\n        ],\n        \"simpleValueType\": true,\n        \"defaultValue\": \"denied\"\n      },\n      {\n        \"type\": \"SELECT\",\n        \"name\": \"purposeMeasurement\",\n        \"displayName\": \"Measurement\",\n        \"macrosInSelect\": false,\n        \"selectItems\": [\n          {\n            \"value\": \"denied\",\n            \"displayValue\": \"Denied\"\n          },\n          {\n            \"value\": \"granted\",\n            \"displayValue\": \"Granted\"\n          }\n        ],\n        \"simpleValueType\": true,\n        \"defaultValue\": \"denied\"\n      },\n      {\n        \"type\": \"SELECT\",\n        \"name\": \"purposeAdvertising\",\n        \"displayName\": \"Targeting \\u0026 Advertising\",\n        \"macrosInSelect\": false,\n        \"selectItems\": [\n          {\n            \"value\": \"denied\",\n            \"displayValue\": \"Denied\"\n          },\n          {\n            \"value\": \"granted\",\n            \"displayValue\": \"Granted\"\n          }\n        ],\n        \"simpleValueType\": true,\n        \"defaultValue\": \"denied\"\n      },\n      {\n        \"type\": \"TEXT\",\n        \"name\": \"waitForUpdate\",\n        \"displayName\": \"Wait for update\",\n        \"simpleValueType\": true,\n        \"defaultValue\": 2000,\n        \"valueValidators\": [\n          {\n            \"type\": \"NON_NEGATIVE_NUMBER\"\n          }\n        ]\n      }\n    ]\n  },\n  {\n    \"type\": \"GROUP\",\n    \"name\": \"regionDefaultConsent\",\n    \"displayName\": \"Purpose default consents (per region)\",\n    \"groupStyle\": \"ZIPPY_CLOSED\",\n    \"subParams\": [\n      {\n        \"type\": \"PARAM_TABLE\",\n        \"name\": \"regionSpecificDefaultConsent\",\n        \"displayName\": \"\",\n        \"paramTableColumns\": [\n          {\n            \"param\": {\n              \"type\": \"TEXT\",\n              \"name\": \"regionCode\",\n              \"displayName\": \"Region Code\",\n              \"simpleValueType\": true,\n              \"valueHint\": \"US\",\n              \"valueValidators\": [\n                {\n                  \"type\": \"NON_EMPTY\"\n                }\n              ]\n            },\n            \"isUnique\": true\n          },\n          {\n            \"param\": {\n              \"type\": \"SELECT\",\n              \"name\": \"purposeBasic\",\n              \"displayName\": \"Basic functionalities\",\n              \"macrosInSelect\": false,\n              \"selectItems\": [\n                {\n                  \"value\": \"denied\",\n                  \"displayValue\": \"Denied\"\n                },\n                {\n                  \"value\": \"granted\",\n                  \"displayValue\": \"Granted\"\n                }\n              ],\n              \"simpleValueType\": true,\n              \"defaultValue\": \"denied\"\n            },\n            \"isUnique\": false\n          },\n          {\n            \"param\": {\n              \"type\": \"SELECT\",\n              \"name\": \"purposeExperience\",\n              \"displayName\": \"Experience enhancement\",\n              \"macrosInSelect\": false,\n              \"selectItems\": [\n                {\n                  \"value\": \"denied\",\n                  \"displayValue\": \"Denied\"\n                },\n                {\n                  \"value\": \"granted\",\n                  \"displayValue\": \"Granted\"\n                }\n              ],\n              \"simpleValueType\": true,\n              \"defaultValue\": \"denied\"\n            },\n            \"isUnique\": false\n          },\n          {\n            \"param\": {\n              \"type\": \"SELECT\",\n              \"name\": \"purposeMeasurement\",\n              \"displayName\": \"Measurement\",\n              \"macrosInSelect\": false,\n              \"selectItems\": [\n                {\n                  \"value\": \"denied\",\n                  \"displayValue\": \"Denied\"\n                },\n                {\n                  \"value\": \"granted\",\n                  \"displayValue\": \"Granted\"\n                }\n              ],\n              \"simpleValueType\": true,\n              \"defaultValue\": \"denied\"\n            },\n            \"isUnique\": false\n          },\n          {\n            \"param\": {\n              \"type\": \"SELECT\",\n              \"name\": \"purposeAdvertising\",\n              \"displayName\": \"Targeting \\u0026 Advertising\",\n              \"macrosInSelect\": false,\n              \"selectItems\": [\n                {\n                  \"value\": \"denied\",\n                  \"displayValue\": \"Denied\"\n                },\n                {\n                  \"value\": \"granted\",\n                  \"displayValue\": \"Granted\"\n                }\n              ],\n              \"simpleValueType\": true,\n              \"defaultValue\": \"denied\"\n            },\n            \"isUnique\": false\n          }\n        ]\n      }\n    ]\n  },\n  {\n    \"type\": \"CHECKBOX\",\n    \"name\": \"urlPassthrough\",\n    \"checkboxText\": \"URL passthrough\",\n    \"simpleValueType\": true,\n    \"defaultValue\": true\n  },\n  {\n    \"type\": \"CHECKBOX\",\n    \"name\": \"adsDataRedaction\",\n    \"checkboxText\": \"Ads data redaction\",\n    \"simpleValueType\": true,\n    \"defaultValue\": true\n  },\n  {\n    \"type\": \"CHECKBOX\",\n    \"name\": \"uet\",\n    \"checkboxText\": \"Use Microsoft UET Consent Mode\",\n    \"simpleValueType\": true,\n    \"defaultValue\": false\n  },\n  {\n    \"type\": \"SELECT\",\n    \"name\": \"embedCS\",\n    \"displayName\": \"How to embed CS\",\n    \"macrosInSelect\": false,\n    \"selectItems\": [\n      {\n        \"value\": \"auto\",\n        \"displayValue\": \"Extended snippet via GTM template\"\n      },\n      {\n        \"value\": \"manual\",\n        \"displayValue\": \"Manually\"\n      },\n      {\n        \"value\": \"jeeg\",\n        \"displayValue\": \"Unified snippet via GTM template\"\n      }\n    ],\n    \"simpleValueType\": true,\n    \"subParams\": [\n      {\n        \"type\": \"LABEL\",\n        \"name\": \"manualLabel\",\n        \"displayName\": \"See guide at \\u003ca href\\u003d\\\"https://www.iubenda.com/en/help/1177-cookie-solution-getting-started#banner\\\"\\u003eHow to add the cookie consent banner\\u003c/a\\u003e\",\n        \"enablingConditions\": [\n          {\n            \"paramName\": \"embedCS\",\n            \"paramValue\": \"manual\",\n            \"type\": \"EQUALS\"\n          }\n        ]\n      },\n      {\n        \"type\": \"TEXT\",\n        \"name\": \"csConfigurationJson\",\n        \"displayName\": \"CS configuration\",\n        \"simpleValueType\": true,\n        \"enablingConditions\": [\n          {\n            \"paramName\": \"embedCS\",\n            \"paramValue\": \"auto\",\n            \"type\": \"EQUALS\"\n          }\n        ],\n        \"lineCount\": 10,\n        \"help\": \"the configuration part (_iub.csConfiguration) of the embedding code displayed in the flow page of iubenda.com (without the callbacks)\",\n        \"valueValidators\": [\n          {\n            \"type\": \"NON_EMPTY\"\n          }\n        ]\n      },\n      {\n        \"type\": \"TEXT\",\n        \"name\": \"csLangConfigurationJson\",\n        \"displayName\": \"CS language configuration\",\n        \"simpleValueType\": true,\n        \"enablingConditions\": [\n          {\n            \"paramName\": \"embedCS\",\n            \"paramValue\": \"auto\",\n            \"type\": \"EQUALS\"\n          }\n        ],\n        \"lineCount\": 10,\n        \"help\": \"the configuration part (_iub.csLangConfiguration) specific to each language\",\n        \"valueValidators\": []\n      },\n      {\n        \"type\": \"SELECT\",\n        \"name\": \"csChannel\",\n        \"displayName\": \"CS channel\",\n        \"macrosInSelect\": false,\n        \"selectItems\": [\n          {\n            \"value\": \"current\",\n            \"displayValue\": \"Current\"\n          },\n          {\n            \"value\": \"beta\",\n            \"displayValue\": \"Beta\"\n          },\n          {\n            \"value\": \"stable\",\n            \"displayValue\": \"Stable\"\n          }\n        ],\n        \"simpleValueType\": true,\n        \"enablingConditions\": [\n          {\n            \"paramName\": \"embedCS\",\n            \"paramValue\": \"auto\",\n            \"type\": \"EQUALS\"\n          }\n        ]\n      },\n      {\n        \"type\": \"TEXT\",\n        \"name\": \"jeegUrl\",\n        \"displayName\": \"Embedding URL\",\n        \"simpleValueType\": true,\n        \"enablingConditions\": [\n          {\n            \"paramName\": \"embedCS\",\n            \"paramValue\": \"jeeg\",\n            \"type\": \"EQUALS\"\n          }\n        ],\n        \"help\": \"Use it if your embedding contains a link like: \\\"https://embeds.iubenda.com/widgets/[id].js\\\"\",\n        \"valueValidators\": [\n          {\n            \"type\": \"NON_EMPTY\"\n          },\n          {\n            \"type\": \"REGEX\",\n            \"args\": [\n              \"^https://embeds\\\\.iubenda\\\\.com/widgets/[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\\\\.js$\"\n            ]\n          }\n        ]\n      },\n      {\n        \"type\": \"CHECKBOX\",\n        \"name\": \"emitGtmEvents\",\n        \"checkboxText\": \"Enable emitGtmEvents\",\n        \"simpleValueType\": true,\n        \"enablingConditions\": [\n          {\n            \"paramName\": \"embedCS\",\n            \"paramValue\": \"manual\",\n            \"type\": \"NOT_EQUALS\"\n          }\n        ]\n      }\n    ]\n  },\n  {\n    \"type\": \"GROUP\",\n    \"name\": \"defaultConsentStorageGroup\",\n    \"displayName\": \"Apply consent default from storage (experimental)\",\n    \"groupStyle\": \"ZIPPY_CLOSED\",\n    \"subParams\": [\n      {\n        \"type\": \"CHECKBOX\",\n        \"name\": \"enableDefaultConsentFromStorage\",\n        \"checkboxText\": \"Set the default consent by reading the browser storage\",\n        \"simpleValueType\": true,\n        \"help\": \"This feature is experimental.\"\n      },\n      {\n        \"type\": \"SELECT\",\n        \"name\": \"storageType\",\n        \"displayName\": \"Storage type\",\n        \"macrosInSelect\": false,\n        \"selectItems\": [\n          {\n            \"value\": \"cookie\",\n            \"displayValue\": \"Cookie\"\n          },\n          {\n            \"value\": \"localStorage\",\n            \"displayValue\": \"Local Storage\"\n          }\n        ],\n        \"simpleValueType\": true,\n        \"enablingConditions\": []\n      },\n      {\n        \"type\": \"SELECT\",\n        \"name\": \"storageIdType\",\n        \"displayName\": \"Cookie Solution ID Type\",\n        \"macrosInSelect\": false,\n        \"selectItems\": [\n          {\n            \"value\": \"siteId\",\n            \"displayValue\": \"Site ID\"\n          },\n          {\n            \"value\": \"cookiePolicyId\",\n            \"displayValue\": \"Cookie Policy ID\"\n          }\n        ],\n        \"simpleValueType\": true\n      },\n      {\n        \"type\": \"TEXT\",\n        \"name\": \"storageId\",\n        \"displayName\": \"Site ID or Cookie Policy ID\",\n        \"simpleValueType\": true,\n        \"help\": \"Depending on the Cookie Solution ID Type, specify the Site ID or the Cookie Policy ID\"\n      }\n    ]\n  }\n]\n\n\n___SANDBOXED_JS_FOR_WEB_TEMPLATE___\n\nconst GtmObject = require('Object');\nconst JSON = require('JSON');\n/* global _iub */\nfunction isSameAsLastUpdate(payload, lastUpdate) {\n  if (!lastUpdate) {\n    return false;\n  }\n  const lastUpdateKeys = GtmObject.keys(lastUpdate).sort();\n  const payloadKeys = GtmObject.keys(payload).sort();\n  const hasMissingKeys = payloadKeys.some(key => lastUpdateKeys.indexOf(key) === -1);\n  if (hasMissingKeys) {\n    return false;\n  }\n  const hasDifferentValues = payloadKeys.some(key => lastUpdate[key] !== payload[key]);\n  if (hasDifferentValues) {\n    return false;\n  }\n  return true;\n}\n\n/**\n * Get the payload for the update consent command\n *\n * @param {GtmObject} defaultConsent - The default consent, if available.\n * @param {*} lastUpdate - The last update payload, if available.\n * @param {*} opts - Options for the consent update.\n * @returns {GtmObject|null} Returns the payload object or null if no update is needed.\n */\nfunction getUpdateConsentPayload(defaultConsent, lastUpdate, opts) {\n  const shouldCheckDefault = !!lastUpdate;\n  const payload = {};\n  for (const key of GtmObject.keys(opts)) {\n    const val = opts[key];\n    if (typeof val !== 'undefined') {\n      payload[key] = val ? 'granted' : 'denied';\n      continue;\n    }\n    if (!shouldCheckDefault) {\n      continue;\n    }\n    const hasDefault = defaultConsent && defaultConsent[key];\n    payload[key] = hasDefault ? defaultConsent[key] : 'denied';\n  }\n  if (GtmObject.keys(payload).length === 0) {\n    // No need to send an update command\n    return null;\n  }\n  if (isSameAsLastUpdate(payload, lastUpdate)) {\n    // No need for an update\n    return null;\n  }\n  return payload;\n}\nfunction mergePayloads(lastUpdate, payload) {\n  if (!lastUpdate) {\n    return payload;\n  }\n  const merged = {};\n  for (const key of GtmObject.keys(lastUpdate)) {\n    merged[key] = lastUpdate[key];\n  }\n  for (const key of GtmObject.keys(payload)) {\n    merged[key] = payload[key];\n  }\n  return merged;\n}\n\nconst log = require('logToConsole');\nconst gtagSet = require('gtagSet');\nconst setDefaultConsentState = require('setDefaultConsentState');\nconst updateConsentState = require('updateConsentState');\nconst makeInteger = require('makeInteger');\nconst copyFromWindow = require('copyFromWindow');\nconst setInWindow = require('setInWindow');\nconst createQueue = require('createQueue');\nconst injectScript = require('injectScript');\nconst isConsentGranted = require('isConsentGranted');\nconst callLater = require('callLater');\nconst getCookieValues = require('getCookieValues');\nconst localStorage = require('localStorage');\nconst queryPermission = require('queryPermission');\nconst uetq = createQueue('uetq');\nconst dataLayerPush = createDataLayerQueue();\nconst STORAGE_PREFIX = '_iub_cs-';\nconst defaultConsentFromStorageActive = canUseDefaultConsentFromStorage();\nif (defaultConsentFromStorageActive) {\n  dataLayerPush({\n    event: 'iubenda_gtm_ready_event'\n  });\n}\nlet defaultConsent = null;\nconst consentTypes = {\n  analytics_storage: true,\n  ad_storage: true,\n  personalization_storage: true,\n  functionality_storage: true,\n  security_storage: true,\n  ad_user_data: true,\n  ad_personalization: true\n};\nfunction main() {\n  log('data =', data);\n  gtagSet({\n    'developer_id.dZTJkMz': true,\n    url_passthrough: data.urlPassthrough,\n    ads_data_redaction: data.adsDataRedaction\n  });\n  if (data.regionSpecificDefaultConsent) {\n    for (const consent of data.regionSpecificDefaultConsent) {\n      setDefaultConsentState({\n        analytics_storage: consent.purposeMeasurement,\n        ad_storage: consent.purposeAdvertising,\n        personalization_storage: consent.purposeExperience,\n        functionality_storage: consent.purposeBasic,\n        security_storage: consent.purposeBasic,\n        ad_user_data: consent.purposeAdvertising,\n        ad_personalization: consent.purposeAdvertising,\n        region: [consent.regionCode],\n        wait_for_update: makeInteger(data.waitForUpdate)\n      });\n    }\n  }\n  if (defaultConsentFromStorageActive) {\n    log('iubenda - default consent feature enabled');\n    const initialPreferencesCore = getInitialPreferencesCore(getStorageItemNameCore());\n    const initialPreferencesUspr = getInitialPreferencesUspr(getStorageItemNameUspr());\n    const initialPreferencesCcpa = getInitialPreferencesCcpa(getStorageItemNameCcpa());\n    log('iubenda - CORE= ', initialPreferencesCore);\n    log('iubenda - USPR= ', initialPreferencesUspr);\n    log('iubenda - CCPA= ', initialPreferencesCcpa);\n    setDefaultConsentState({\n      ad_storage: getAdStorageStore(initialPreferencesCore, initialPreferencesUspr),\n      ad_personalization: getAdPersonalizationStore(initialPreferencesCore, initialPreferencesUspr),\n      ad_user_data: getAdUserDataStore(initialPreferencesCore, initialPreferencesUspr),\n      analytics_storage: getAnalyticsStorageStore(initialPreferencesCore, initialPreferencesUspr, initialPreferencesCcpa),\n      functionality_storage: getFunctionalityStorageStore(initialPreferencesCore, initialPreferencesUspr),\n      personalization_storage: getPersonalizationStorageStore(initialPreferencesCore, initialPreferencesUspr),\n      security_storage: getSecurityStorageStore(initialPreferencesCore, initialPreferencesUspr)\n    });\n    dataLayerPush({\n      event: 'iubenda_gtm_default_consent_event'\n    });\n    if (data.uet) {\n      uetq('consent', 'default', {\n        ad_storage: getAdStorageStore(initialPreferencesCore, initialPreferencesUspr)\n      });\n    }\n  } else {\n    setDefaultConsentState({\n      analytics_storage: data.purposeMeasurement,\n      ad_storage: data.purposeAdvertising,\n      personalization_storage: data.purposeExperience,\n      functionality_storage: data.purposeBasic,\n      security_storage: data.purposeBasic,\n      ad_user_data: data.purposeAdvertising,\n      ad_personalization: data.purposeAdvertising,\n      wait_for_update: makeInteger(data.waitForUpdate)\n    });\n  }\n  callLater(() => {\n    defaultConsent = {};\n    for (const key of GtmObject.keys(consentTypes)) {\n      defaultConsent[key] = isConsentGranted(key) ? 'granted' : 'denied';\n    }\n  });\n  setupIubDataLayer();\n  let embedConfig;\n  if (data.embedCS === 'auto') {\n    embedConfig = prepareEmbedConfigAuto();\n  } else if (data.embedCS === 'jeeg') {\n    embedConfig = prepareEmbedConfigJeeg();\n  } else {\n    data.gtmOnSuccess();\n  }\n  if (embedConfig) {\n    embedScripts(embedConfig, () => {\n      log('embedded CS scripts');\n      data.gtmOnSuccess();\n    }, () => {\n      log('failed to embed CS scripts');\n      data.gtmOnFailure();\n    });\n  }\n}\nfunction processDataLayerCommand(elem) {\n  if (typeof elem === 'object') {\n    if (elem[0] === 'updateConsent') {\n      updateConsent(elem[1]);\n    }\n  }\n}\nlet lastUpdate = null;\nfunction updateConsent(opts) {\n  const payload = getUpdateConsentPayload(defaultConsent, lastUpdate, opts);\n  if (!payload) {\n    return;\n  }\n  lastUpdate = mergePayloads(lastUpdate, payload);\n  updateConsentState(payload);\n  if (data.uet && typeof payload.ad_storage !== 'undefined') {\n    uetq('consent', 'update', {\n      ad_storage: payload.ad_storage\n    });\n  }\n}\nfunction setupIubDataLayer() {\n  const windowIub = copyFromWindow('_iub');\n  if (!windowIub) {\n    setInWindow('_iub', {});\n  }\n  const iubDataLayerPush = createQueue('_iub.gtmDataLayer');\n  const iubDataLayerPushV2 = createQueue('_iub.gtmDataLayerV2');\n  const windowIubDataLayer = copyFromWindow('_iub.gtmDataLayer');\n  const windowIubDataLayerV2 = copyFromWindow('_iub.gtmDataLayerV2');\n  let highestSupportedVersion = 1;\n  setInWindow('_iub.gtmDataLayerV2.pushCommand', function windowIubDataLayerV2Push() {\n    highestSupportedVersion = 2;\n    fnApply(iubDataLayerPushV2, arguments);\n    fnApply(processDataLayerCommand, arguments);\n  }, true);\n  setInWindow('_iub.gtmDataLayer.pushCommand', function windowIubDataLayerPush() {\n    if (highestSupportedVersion <= 1) {\n      fnApply(iubDataLayerPush, arguments);\n      fnApply(processDataLayerCommand, arguments);\n    }\n  }, true);\n  if (windowIubDataLayerV2) {\n    highestSupportedVersion = 2;\n    for (const item of windowIubDataLayerV2) {\n      processDataLayerCommand(item);\n    }\n  }\n  if (windowIubDataLayer) {\n    if (highestSupportedVersion <= 1) {\n      for (const item of windowIubDataLayer) {\n        processDataLayerCommand(item);\n      }\n    }\n  }\n}\nfunction prepareEmbedConfigAuto() {\n  const csConfiguration = JSON.parse(data.csConfigurationJson);\n  if (typeof csConfiguration !== 'object') {\n    log('csConfiguration is not valid');\n    data.gtmOnFailure();\n    return null;\n  }\n  const csLangConfiguration = data.csLangConfigurationJson ? JSON.parse(data.csLangConfigurationJson) : {};\n  csConfiguration.googleConsentMode = 'template';\n  if (data.emitGtmEvents) {\n    csConfiguration.emitGtmEvents = true;\n  }\n  if (defaultConsentFromStorageActive) {\n    csConfiguration.callback = {};\n    csConfiguration.callback.onReady = () => {\n      dataLayerPush({\n        event: 'iubenda_gtm_cs_ready_event'\n      });\n    };\n    csConfiguration.callback.onBannerShown = () => {\n      dataLayerPush({\n        event: 'iubenda_gtm_cs_banner_shown_event'\n      });\n    };\n    csConfiguration.callback.onCcpaOptOut = () => {\n      dataLayerPush({\n        event: 'iubenda_gtm_ccpa_optout_event'\n      });\n    };\n  }\n  const windowIub = copyFromWindow('_iub');\n  if (!windowIub) {\n    setInWindow('_iub', {});\n  }\n  setInWindow('_iub.csConfiguration', csConfiguration);\n  setInWindow('_iub.csLangConfiguration', csLangConfiguration);\n  return csConfiguration;\n}\nfunction prepareEmbedConfigJeeg() {\n  const url = data.jeegUrl;\n  if (typeof url !== 'string') {\n    log('jeegUrl is not valid');\n    data.gtmOnFailure();\n    return null;\n  }\n  const windowIub = copyFromWindow('_iub');\n  if (!windowIub) {\n    setInWindow('_iub', {});\n  }\n  let csConfiguration = copyFromWindow('_iub.csConfiguration');\n  if (!csConfiguration) {\n    csConfiguration = {};\n  }\n  csConfiguration.googleConsentMode = 'template';\n  if (data.emitGtmEvents) {\n    csConfiguration.emitGtmEvents = true;\n  }\n  setInWindow('_iub.csConfiguration', csConfiguration);\n  return {\n    jeegUrl: url\n  };\n}\nfunction createDataLayerQueue() {\n  if (queryPermission('access_globals', 'readwrite', 'dataLayer')) {\n    return createQueue('dataLayer');\n  }\n  const emptyFunction = function () {};\n  return emptyFunction;\n}\nfunction canUseDefaultConsentFromStorage() {\n  return queryPermission('access_globals', 'readwrite', 'dataLayer') && data.enableDefaultConsentFromStorage === true ? true : false;\n}\nfunction getPreferenceObject(storageValue) {\n  let result = {};\n  if (typeof storageValue !== 'undefined' && storageValue.length > 0) {\n    log('returning= ', JSON.parse(storageValue[0]));\n    result = JSON.parse(storageValue[0]);\n  }\n  return result;\n}\nfunction getStorageItemNameCore() {\n  if (data.storageIdType === 'cookiePolicyId') {\n    return STORAGE_PREFIX + data.storageId;\n  }\n  return STORAGE_PREFIX + 's' + data.storageId;\n}\nfunction getStorageItemNameUspr() {\n  if (data.storageIdType === 'cookiePolicyId') {\n    return STORAGE_PREFIX + data.storageId + '-uspr';\n  }\n  return STORAGE_PREFIX + 's' + data.storageId + '-uspr';\n}\nfunction getStorageItemNameCcpa() {\n  return 'usprivacy';\n}\nfunction getStorageItem(itemName) {\n  log('storageType = ', data.storageType);\n  if (data.storageType === 'localStorage') {\n    return localStorage(itemName);\n  }\n  return getCookieValues(itemName);\n}\nfunction getInitialPreferencesCore(storageItemName) {\n  const prefs = getStorageItem(storageItemName);\n  return getPreferenceObject(prefs);\n}\nfunction getInitialPreferencesUspr(storageItemName) {\n  const prefs = getStorageItem(storageItemName);\n  return getPreferenceObject(prefs);\n}\nfunction getInitialPreferencesCcpa(storageItemName) {\n  const prefs = getStorageItem(storageItemName);\n  return getPreferenceObject(prefs);\n}\nconst consentTypeToPurpose = {\n  analytics_storage: [4],\n  ad_storage: [5],\n  functionality_storage: [2],\n  personalization_storage: [3],\n  security_storage: [2],\n  ad_personalization: [5],\n  ad_user_data: [5]\n};\nconst consentTypeToUsPurposes = {\n  analytics_storage: ['s'],\n  ad_storage: ['s', 'sh', 'adv'],\n  functionality_storage: [],\n  personalization_storage: [],\n  security_storage: [],\n  ad_personalization: ['sh', 'adv'],\n  ad_user_data: ['sh', 'adv']\n};\nfunction getAvailablePurposesStore(purposeList, purposesNeeded) {\n  const result = purposeList.filter(purpose => {\n    return purposesNeeded.map(item => item.toString()).indexOf(purpose.toString()) !== -1;\n  });\n  return result;\n}\nfunction getPurposeConsentStore(corePrefs, usprPrefs, purposeName) {\n  let result = true;\n  if (GtmObject.keys(corePrefs).length) {\n    const coreAvailablePurposes = getAvailablePurposesStore(GtmObject.keys(corePrefs.purposes || {}), consentTypeToPurpose[purposeName]);\n    const coreResult = coreAvailablePurposes.filter(purpose => {\n      return corePrefs.purposes[purpose] === true;\n    });\n    result = coreResult.length === consentTypeToPurpose[purposeName].length;\n  }\n  if (GtmObject.keys(usprPrefs).length && result) {\n    const usprAvailablePurposes = getAvailablePurposesStore(GtmObject.keys(usprPrefs || {}), consentTypeToUsPurposes[purposeName]);\n    const usprResult = usprAvailablePurposes.filter(purpose => {\n      return usprPrefs[purpose] === true;\n    });\n    result = usprResult.length === consentTypeToUsPurposes[purposeName].length;\n  }\n  return result;\n}\nfunction hasCookie(cookieDataList) {\n  const cookieData = cookieDataList.filter(cookie => GtmObject.keys(cookie).length);\n  return cookieData.length > 0;\n}\nfunction getAdStorageStore(corePrefs, usprPrefs) {\n  if (!hasCookie([corePrefs, usprPrefs])) {\n    return data.purposeAdvertising;\n  }\n  const result = getPurposeConsentStore(corePrefs, usprPrefs, 'ad_storage');\n  return result === true ? 'granted' : 'denied';\n}\nfunction getAdPersonalizationStore(corePrefs, usprPrefs) {\n  if (!hasCookie([corePrefs, usprPrefs])) {\n    return data.purposeAdvertising;\n  }\n  const result = getPurposeConsentStore(corePrefs, usprPrefs, 'ad_personalization');\n  return result === true ? 'granted' : 'denied';\n}\nfunction getAdUserDataStore(corePrefs, usprPrefs) {\n  if (!hasCookie([corePrefs, usprPrefs])) {\n    return data.purposeAdvertising;\n  }\n  const result = getPurposeConsentStore(corePrefs, usprPrefs, 'ad_user_data');\n  return result === true ? 'granted' : 'denied';\n}\nfunction getAnalyticsStorageStore(corePrefs, usprPrefs, ccpaPrefs) {\n  if (!hasCookie([corePrefs, usprPrefs, ccpaPrefs])) {\n    return data.purposeMeasurement;\n  }\n  let result = getPurposeConsentStore(corePrefs, usprPrefs, 'analytics_storage');\n  if (ccpaPrefs.hasOwnProperty('uspString') && result) {\n    result = ccpaPrefs.uspString.indexOf('1YN') !== -1;\n  }\n  return result === true ? 'granted' : 'denied';\n}\nfunction getFunctionalityStorageStore(corePrefs, usprPrefs) {\n  if (!hasCookie([corePrefs, usprPrefs])) {\n    return data.purposeBasic;\n  }\n  const result = getPurposeConsentStore(corePrefs, usprPrefs, 'functionality_storage');\n  return result === true ? 'granted' : 'denied';\n}\nfunction getPersonalizationStorageStore(corePrefs, usprPrefs) {\n  if (!hasCookie([corePrefs, usprPrefs])) {\n    return data.purposeExperience;\n  }\n  const result = getPurposeConsentStore(corePrefs, usprPrefs, 'personalization_storage');\n  return result === true ? 'granted' : 'denied';\n}\nfunction getSecurityStorageStore(corePrefs, usprPrefs) {\n  if (!hasCookie([corePrefs, usprPrefs])) {\n    return data.purposeBasic;\n  }\n  const result = getPurposeConsentStore(corePrefs, usprPrefs, 'security_storage');\n  return result === true ? 'granted' : 'denied';\n}\nfunction embedScripts(config, onSuccess, onFail) {\n  const scriptsToInject = [];\n  if (config.jeegUrl) {\n    log(\"Loading iubenda's unified snippet\");\n    scriptsToInject.push(config.jeegUrl);\n  } else {\n    log(\"Loading iubenda's extended snippet\");\n    const channel = data.csChannel;\n    if (config.enableTcf || config.enableCMP) {\n      const tcfStub = makeUrl(channel, 'tcf', 'stub.js');\n      const safeTcf = makeUrl(channel, 'tcf', 'safe-tcf.js');\n      scriptsToInject.push(tcfStub, safeTcf);\n    }\n    if (config.enableCcpa) {\n      const ccpaStub = makeUrl(channel, 'ccpa', 'stub.js');\n      scriptsToInject.push(ccpaStub);\n    }\n    scriptsToInject.push(makeUrl(channel, '', 'iubenda_cs.js'));\n  }\n  let scriptsInjected = 0;\n  let failed = false;\n  const localOnSuccess = () => {\n    scriptsInjected++;\n    if (scriptsInjected === scriptsToInject.length && !failed) {\n      onSuccess();\n    }\n  };\n  const localOnFail = () => {\n    if (!failed) {\n      failed = true;\n      onFail();\n    }\n  };\n  for (const script of scriptsToInject) {\n    injectScript(script, localOnSuccess, localOnFail);\n  }\n  if (scriptsToInject.length === 0) {\n    onSuccess();\n  }\n}\nfunction makeUrl(channel, feature, script) {\n  const featurePart = feature ? feature + '/' : '';\n  const channelPart = channel === 'current' ? '' : channel + '/';\n  return 'https://cdn.iubenda.com/cs/' + featurePart + channelPart + script;\n}\n\n// This function acts like Function.prototype.apply, which does not work in the sandbox environment\nfunction fnApply(fn, args) {\n  switch (args.length) {\n    case 0:\n      return fn();\n    case 1:\n      return fn(args[0]);\n    case 2:\n      return fn(args[0], args[1]);\n    case 3:\n      return fn(args[0], args[1], args[2]);\n    default:\n      return fn(args[0], args[1], args[2], args[3]);\n  }\n}\nmain();\n\n\n___WEB_PERMISSIONS___\n\n[\n  {\n    \"instance\": {\n      \"key\": {\n        \"publicId\": \"logging\",\n        \"versionId\": \"1\"\n      },\n      \"param\": [\n        {\n          \"key\": \"environments\",\n          \"value\": {\n            \"type\": 1,\n            \"string\": \"debug\"\n          }\n        }\n      ]\n    },\n    \"clientAnnotations\": {\n      \"isEditedByUser\": true\n    },\n    \"isRequired\": true\n  },\n  {\n    \"instance\": {\n      \"key\": {\n        \"publicId\": \"write_data_layer\",\n        \"versionId\": \"1\"\n      },\n      \"param\": [\n        {\n          \"key\": \"keyPatterns\",\n          \"value\": {\n            \"type\": 2,\n            \"listItem\": [\n              {\n                \"type\": 1,\n                \"string\": \"developer_id.dZTJkMz\"\n              },\n              {\n                \"type\": 1,\n                \"string\": \"url_passthrough\"\n              },\n              {\n                \"type\": 1,\n                \"string\": \"ads_data_redaction\"\n              }\n            ]\n          }\n        }\n      ]\n    },\n    \"clientAnnotations\": {\n      \"isEditedByUser\": true\n    },\n    \"isRequired\": true\n  },\n  {\n    \"instance\": {\n      \"key\": {\n        \"publicId\": \"access_consent\",\n        \"versionId\": \"1\"\n      },\n      \"param\": [\n        {\n          \"key\": \"consentTypes\",\n          \"value\": {\n            \"type\": 2,\n            \"listItem\": [\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"consentType\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"ad_storage\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"consentType\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"analytics_storage\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"consentType\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"functionality_storage\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"consentType\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"personalization_storage\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"consentType\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"security_storage\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"consentType\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"ad_user_data\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"consentType\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"ad_personalization\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"consentType\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"wait_for_update\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  }\n                ]\n              }\n            ]\n          }\n        }\n      ]\n    },\n    \"clientAnnotations\": {\n      \"isEditedByUser\": true\n    },\n    \"isRequired\": true\n  },\n  {\n    \"instance\": {\n      \"key\": {\n        \"publicId\": \"access_globals\",\n        \"versionId\": \"1\"\n      },\n      \"param\": [\n        {\n          \"key\": \"keys\",\n          \"value\": {\n            \"type\": 2,\n            \"listItem\": [\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"key\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"execute\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"_iub\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": false\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"key\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"execute\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"_iub.csConfiguration\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": false\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"key\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"execute\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"_iub.csLangConfiguration\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": false\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"key\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"execute\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"_iub.gtmDataLayer\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": false\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"key\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"execute\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"_iub.gtmDataLayer.pushCommand\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": false\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"key\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"execute\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"_iub.gtmDataLayerV2\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": false\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"key\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"execute\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"_iub.gtmDataLayerV2.pushCommand\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": false\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"key\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"execute\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"dataLayer\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": false\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"key\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"execute\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"uetq\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": false\n                  }\n                ]\n              }\n            ]\n          }\n        }\n      ]\n    },\n    \"clientAnnotations\": {\n      \"isEditedByUser\": true\n    },\n    \"isRequired\": true\n  },\n  {\n    \"instance\": {\n      \"key\": {\n        \"publicId\": \"inject_script\",\n        \"versionId\": \"1\"\n      },\n      \"param\": [\n        {\n          \"key\": \"urls\",\n          \"value\": {\n            \"type\": 2,\n            \"listItem\": [\n              {\n                \"type\": 1,\n                \"string\": \"https://cdn.iubenda.com/cs/*.js\"\n              },\n              {\n                \"type\": 1,\n                \"string\": \"https://embeds.iubenda.com/widgets/*.js\"\n              }\n            ]\n          }\n        }\n      ]\n    },\n    \"clientAnnotations\": {\n      \"isEditedByUser\": true\n    },\n    \"isRequired\": true\n  },\n  {\n    \"instance\": {\n      \"key\": {\n        \"publicId\": \"get_cookies\",\n        \"versionId\": \"1\"\n      },\n      \"param\": [\n        {\n          \"key\": \"cookieAccess\",\n          \"value\": {\n            \"type\": 1,\n            \"string\": \"any\"\n          }\n        }\n      ]\n    },\n    \"clientAnnotations\": {\n      \"isEditedByUser\": true\n    },\n    \"isRequired\": true\n  },\n  {\n    \"instance\": {\n      \"key\": {\n        \"publicId\": \"access_local_storage\",\n        \"versionId\": \"1\"\n      },\n      \"param\": []\n    },\n    \"isRequired\": true\n  }\n]\n\n\n___TESTS___\n\nscenarios: []\n\n\n___NOTES___\n\n2.4.0 - 2025-08-12\n==================\n* Enable emitGtmEvents from GTM template, https://app.asana.com/0/0/1210829685859343/f\n\n2.3.0 - 2025-06-25\n==================\n* Add support for Microsoft UET inside GTM template, https://app.asana.com/1/13327221380952/project/1200896321422485/task/1209387092074102\n\n2.2.1 - 2025-05-14\n==================\n* Add extra logs, https://app.asana.com/0/0/1210248385958758/f\n\n2.2.0 - 2025-05-07\n==================\n* Add support for JEEG, https://app.asana.com/0/0/1209076786249844/f\n\n2.1.12 - 2025-04-10\n==================\n* Add the consent default feature to the GTM template, https://app.asana.com/1/13327221380952/project/1205073225402078/task/1209809091650401\n\n2.1.11 - 2025-01-25\n==================\n* Update GTM template description and images, https://app.asana.com/0/0/1208997252960350/f\n\n2.1.10 - 2024-12-16\n==================\n* Fix gtm template json parse, https://app.asana.com/0/0/1208768099704760/f\n\n2.1.9 - 2024-09-04\n==================\n* Update GTM Template preview images, https://app.asana.com/0/1200896321422485/1208210766553427/f\n\n2.1.6 - 2024-08-28\n==================\n* Add termsAndConditionsUrl, https://app.asana.com/0/0/1208166669923284/f\n\n2.1.5 - 2024-08-23\n==================\n* Update info of GTM vendor, https://app.asana.com/0/1205073225402078/1208103739034028/f\n\n2.1.4 - 2024-08-19\n==================\n* Update vendor details URL, https://app.asana.com/0/0/1208075350224779/f\n\n2.1.3 - 2024-08-08\n==================\n* Add vendor details section to GTM template, https://app.asana.com/0/0/1207977714365573/f\n\n2.1.2 - 2024-06-24\n==================\n* Add the ability to specify consent mode default consents per region in GTM, https://app.asana.com/0/0/1202566603078816/f\n\n2.1.1 - 2024-05-16\n==================\n* Make csLangConfiguration an optional field, https://app.asana.com/0/0/1207330135093962/f\n\n2.1.0 - 2024-05-14\n==================\n* Add csLangConfiguration map on GTM template, https://app.asana.com/0/215506225642940/1207219173429602/f\n* Fix conditional of update consent in gtm template, https://app.asana.com/0/218193805248770/1207146967412217/f\n\n2.0.1 - 2024-03-07\n==================\n* Change GTM template default channel to current, https://app.asana.com/0/0/1206474874048897/f\n\n2.0.0 - 2023-11-27\n==================\n* Implement Google consent mode v2, https://app.asana.com/0/0/1205421168278986/f\n* Implement Consent Mode v2 | implement safe v2 update, https://app.asana.com/0/0/1205738393169140/f\n\n1.2.0 - 2023-09-20\n==================\n* Rename GTM template, https://app.asana.com/0/215506225642940/1205528510434063/f\n\n1.1.0 - 2022-08-10\n==================\n* Add wait_for_update parameter, https://app.asana.com/0/215506225642940/1202738066967665/f\n\n1.0.0 - 2022-07-01\n==================\n* Initial release\n\n\n",
+                "galleryReference": {
+                    "host": "github.com",
+                    "owner": "iubenda",
+                    "repository": "gtm-cookie-solution",
+                    "version": "57760e40eebf8b1973d66d0addbff686ad8faa3c",
+                    "signature": "47dd8b63413a01c930df707010e8557751de5458864cfa27999c457a40080b39",
+                    "galleryTemplateId": "KFGZD"
+                }
+            },
+            {
+                "accountId": "6341256602",
+                "containerId": "244661607",
+                "templateId": "25",
+                "name": "Microsoft Clarity - Official",
+                "fingerprint": "1772359095613",
+                "templateData": "___TERMS_OF_SERVICE___\n\nBy creating or modifying this file you agree to Google Tag Manager's Community\nTemplate Gallery Developer Terms of Service available at\nhttps://developers.google.com/tag-manager/gallery-tos (or such other URL as\nGoogle may provide), as modified from time to time.\n\n\n___INFO___\n\n{\n  \"type\": \"TAG\",\n  \"id\": \"cvt_MQDKZ\",\n  \"version\": 1,\n  \"displayName\": \"Microsoft Clarity - Official\",\n  \"categories\": [\n    \"ANALYTICS\",\n    \"HEAT_MAP\",\n    \"SESSION_RECORDING\"\n  ],\n  \"brand\": {\n    \"id\": \"github.com_microsoft\",\n    \"displayName\": \"microsoft\",\n    \"thumbnail\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACABAMAAAAxEHz4AAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAElBMVEUAAADyUCJ/ugAApO//uQD///8951e2AAAAAXRSTlMAQObYZgAAAAFiS0dEBfhv6ccAAAAHdElNRQfkCgUWITsZUDiiAAAAS0lEQVRo3u3MQQ3AIAAEsMuCAGZhCkiwgH9NOLj3Hq2A5q1m8nxVBAKBQCAQCAQCgUAgEPSAP9jVSsapBAKBQCAQCAQCgUAgEPTgAruK0CdlWNSzAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDIwLTEwLTA1VDIyOjMzOjU5KzAwOjAwPT1n8QAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyMC0xMC0wNVQyMjozMzo1OSswMDowMExg300AAAAASUVORK5CYII\\u003d\"\n  },\n  \"description\": \"Clarity is a user behavior analytics tool, which helps you understand how users are interacting with your website. Supported features include:\\nSession Recordings\\nHeatmaps\\nML Insights\",\n  \"containerContexts\": [\n    \"WEB\"\n  ]\n}\n\n\n___TEMPLATE_PARAMETERS___\n\n[\n  {\n    \"type\": \"TEXT\",\n    \"name\": \"projectId\",\n    \"displayName\": \"Clarity Project Id\",\n    \"simpleValueType\": true,\n    \"help\": \"Copy your clarity project Id here. You can find it in the project Url from the browser. Example: https://clarity.microsoft.com/projects/view/\\\"projectId\\\"/\",\n    \"valueValidators\": [\n      {\n        \"type\": \"NON_EMPTY\",\n        \"errorMessage\": \"You must provide a clarity project Id\"\n      },\n      {\n        \"type\": \"REGEX\",\n        \"args\": [\n          \"[0-9a-z]+\"\n        ],\n        \"errorMessage\": \"Incorrect project Id. You can find it in the project Url from the browser. Example: https://clarity.microsoft.com/projects/view/\\\"projectId\\\"/\"\n      }\n    ]\n  },\n  {\n    \"type\": \"GROUP\",\n    \"name\": \"advanced\",\n    \"displayName\": \"Custom Options\",\n    \"groupStyle\": \"ZIPPY_CLOSED\",\n    \"subParams\": [\n      {\n        \"type\": \"GROUP\",\n        \"name\": \"custom_id\",\n        \"displayName\": \"Custom Identifiers\",\n        \"groupStyle\": \"NO_ZIPPY\",\n        \"subParams\": [\n          {\n            \"type\": \"TEXT\",\n            \"name\": \"userId\",\n            \"displayName\": \"Custom Id\",\n            \"simpleValueType\": true,\n            \"help\": \"Custom id such as an email, can help you view the user journey across browsers and devices\",\n            \"valueHint\": \"user@domain.com\"\n          },\n          {\n            \"type\": \"TEXT\",\n            \"name\": \"sessionId\",\n            \"displayName\": \"Session Id\",\n            \"simpleValueType\": true,\n            \"help\": \"Custom session id to help you filter for this session later\",\n            \"enablingConditions\": [\n              {\n                \"paramName\": \"userId\",\n                \"paramValue\": \"\",\n                \"type\": \"PRESENT\"\n              }\n            ],\n            \"valueHint\": \"custom-session-id\"\n          },\n          {\n            \"type\": \"TEXT\",\n            \"name\": \"pageId\",\n            \"displayName\": \"Page Id\",\n            \"simpleValueType\": true,\n            \"help\": \"Custom page id to help you filter for this page later\",\n            \"enablingConditions\": [\n              {\n                \"paramName\": \"userId\",\n                \"paramValue\": \"\",\n                \"type\": \"PRESENT\"\n              }\n            ],\n            \"valueHint\": \"custom-page-id\"\n          },\n          {\n            \"type\": \"TEXT\",\n            \"name\": \"friendlyName\",\n            \"displayName\": \"Friendly Name\",\n            \"simpleValueType\": true,\n            \"help\": \"Friendly name for the user\",\n            \"enablingConditions\": [\n              {\n                \"paramName\": \"userId\",\n                \"paramValue\": \"\",\n                \"type\": \"PRESENT\"\n              }\n            ],\n            \"valueHint\": \"Mona\"\n          }\n        ],\n        \"help\": \"Custom Identifiers are informational data values about site visitors\",\n        \"enablingConditions\": []\n      },\n      {\n        \"type\": \"SIMPLE_TABLE\",\n        \"name\": \"custom_tag\",\n        \"displayName\": \"Custom Tag\",\n        \"simpleTableColumns\": [\n          {\n            \"defaultValue\": \"\",\n            \"displayName\": \"Key\",\n            \"name\": \"key\",\n            \"type\": \"TEXT\",\n            \"valueHint\": \"\"\n          },\n          {\n            \"defaultValue\": \"\",\n            \"displayName\": \"Value\",\n            \"name\": \"value\",\n            \"type\": \"TEXT\",\n            \"valueValidators\": [\n              {\n                \"type\": \"STRING_LENGTH\",\n                \"args\": [\n                  1,\n                  255\n                ]\n              }\n            ],\n            \"valueHint\": \"\"\n          }\n        ],\n        \"help\": \"Custom tags are customizable filters that allow you to analyze recordings and heatmaps in different directions\",\n        \"valueValidators\": []\n      }\n    ]\n  }\n]\n\n\n___SANDBOXED_JS_FOR_WEB_TEMPLATE___\n\n// Require the necessary APIs\nconst injectScript = require('injectScript');\nconst queryPermission = require('queryPermission');\nconst createArgumentsQueue = require('createArgumentsQueue');\nconst encodeUri = require('encodeUri');\n//const log = require('logToConsole');\n\n// Create clarity const\nconst clarity = createArgumentsQueue('clarity', 'clarity.q');\n\nconst customTags = data.custom_tag || [];\nconst friendlyName = data.friendlyName || '';\nconst sessionId = data.sessionId || '';\nconst pageId = data.pageId || '';\n\n// Reconstruct customer clarity script URL\nconst url = \"https://www.clarity.ms/tag/\"+encodeUri(data.projectId)+\"?ref=gtm\";\n\n// Handle Success\nconst onCustomerSuccess = () => {\n  data.gtmOnSuccess();\n};\n\n// Handle Failure\nconst onCustomerFailure = () => {\n  data.gtmOnFailure();\n};\n\n\n// If the URL input by the user matches the permissions set for the template,\n// inject the script with the onSuccess and onFailure methods as callbacks.\nif (queryPermission('inject_script', \"https://www.clarity.ms\")) {\n  for(var i=0; i < customTags.length; i++){\n    if(customTags[i].value) {\n      clarity('set', customTags[i].key, customTags[i].value);\n    }\n  }\n  \n  if(data.userId){\n    clarity(\"identify\", data.userId, sessionId, pageId, friendlyName);\n  }\n  \n  injectScript(url, onCustomerSuccess, onCustomerFailure);\n  \n} else {\n  data.gtmOnFailure();\n}\n\n\n___WEB_PERMISSIONS___\n\n[\n  {\n    \"instance\": {\n      \"key\": {\n        \"publicId\": \"inject_script\",\n        \"versionId\": \"1\"\n      },\n      \"param\": [\n        {\n          \"key\": \"urls\",\n          \"value\": {\n            \"type\": 2,\n            \"listItem\": [\n              {\n                \"type\": 1,\n                \"string\": \"https://www.clarity.ms/*\"\n              }\n            ]\n          }\n        }\n      ]\n    },\n    \"clientAnnotations\": {\n      \"isEditedByUser\": true\n    },\n    \"isRequired\": true\n  },\n  {\n    \"instance\": {\n      \"key\": {\n        \"publicId\": \"access_globals\",\n        \"versionId\": \"1\"\n      },\n      \"param\": [\n        {\n          \"key\": \"keys\",\n          \"value\": {\n            \"type\": 2,\n            \"listItem\": [\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"key\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"execute\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"clarity\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  }\n                ]\n              },\n              {\n                \"type\": 3,\n                \"mapKey\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"key\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"read\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"write\"\n                  },\n                  {\n                    \"type\": 1,\n                    \"string\": \"execute\"\n                  }\n                ],\n                \"mapValue\": [\n                  {\n                    \"type\": 1,\n                    \"string\": \"clarity.q\"\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  },\n                  {\n                    \"type\": 8,\n                    \"boolean\": true\n                  }\n                ]\n              }\n            ]\n          }\n        }\n      ]\n    },\n    \"clientAnnotations\": {\n      \"isEditedByUser\": true\n    },\n    \"isRequired\": true\n  }\n]\n\n\n___TESTS___\n\nscenarios: []\n\n\n___NOTES___\n\nCreated on 2/2/2021, 12:41:15 PM\n\n\n",
+                "galleryReference": {
+                    "host": "github.com",
+                    "owner": "microsoft",
+                    "repository": "clarity-gtm-template",
+                    "version": "d85d0a7070ff9e1626bb260dfa341653be7f3266",
+                    "signature": "6d80fb063e54671b559a5692f7bfdedb1ae33ebbe20063c6515d68a895455b45",
+                    "galleryTemplateId": "MQDKZ"
+                }
+            }
+        ]
+    }
+}
