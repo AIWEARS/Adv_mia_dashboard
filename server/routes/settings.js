@@ -24,7 +24,7 @@
  */
 
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import {
   getConnectionStatus, setActiveSource, getActiveSource,
   getConnections
@@ -34,7 +34,7 @@ import * as metaAds from '../services/metaAdsConnector.js';
 import * as ga4 from '../services/ga4Connector.js';
 
 const router = Router();
-router.use(authMiddleware);
+router.use(authenticateToken);
 
 // ==================== STATO GENERALE ====================
 

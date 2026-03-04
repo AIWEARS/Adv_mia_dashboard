@@ -19,9 +19,20 @@ import './services/dataStore.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS - allow Vite dev server
+// CORS
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Origin non consentito da CORS'));
+  },
   credentials: true
 }));
 
@@ -54,6 +65,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`MIA Diagnosi server running on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`MIA Diagnosi server running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
