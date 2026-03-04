@@ -24,8 +24,8 @@ function buildDiagnosisFromUnified(unified) {
       titolo: 'CTR sotto la media',
       gravita: 'alta',
       descrizione: `Il CTR medio e' ${unified.ctr_medio.toFixed(2)}%, sotto la soglia del 1.5%. Le creativita' non catturano abbastanza attenzione.`,
-      impatto: 'Stai pagando per impressioni che non generano click. Ogni punto percentuale di CTR in piu' puo' ridurre il costo per click.',
-      azione: 'Testa nuove creativita' con ganci diversi: domande, numeri specifici, urgenza. Cambia le immagini ogni 2 settimane.'
+      impatto: 'Stai pagando per impressioni che non generano click. Ogni punto percentuale di CTR in piu\' puo\' ridurre il costo per click.',
+      azione: "Testa nuove creativita' con ganci diversi: domande, numeri specifici, urgenza. Cambia le immagini ogni 2 settimane."
     });
   }
 
@@ -38,7 +38,7 @@ function buildDiagnosisFromUnified(unified) {
       gravita: 'alta',
       descrizione: `Il costo per lead e' ${cpl.toFixed(2)} euro. Per il settore moda su misura, dovrebbe stare sotto i 100 euro.`,
       impatto: `Con ${unified.spesa_totale.toFixed(0)} euro di spesa, dovresti ottenere almeno ${Math.ceil(unified.spesa_totale / 100)} lead invece di ${unified.conversioni.lead_preventivo}.`,
-      azione: 'Rivedi il targeting: restringe il pubblico ai profili piu' propensi. Migliora la landing page per aumentare le conversioni.'
+      azione: "Rivedi il targeting: restringe il pubblico ai profili piu' propensi. Migliora la landing page per aumentare le conversioni."
     });
   } else if (cpl > 80 && unified.conversioni.lead_preventivo > 0) {
     issues.push({
@@ -48,7 +48,7 @@ function buildDiagnosisFromUnified(unified) {
       gravita: 'media',
       descrizione: `Il costo per lead e' ${cpl.toFixed(2)} euro. Accettabile ma con margine di miglioramento.`,
       impatto: 'Ottimizzando il CPL sotto i 80 euro risparmieresti budget da reinvestire.',
-      azione: 'Analizza quali campagne hanno il CPL piu' basso e sposta budget verso quelle.'
+      azione: "Analizza quali campagne hanno il CPL piu' basso e sposta budget verso quelle."
     });
   }
 
@@ -60,7 +60,7 @@ function buildDiagnosisFromUnified(unified) {
       titolo: 'Nessun lead registrato',
       gravita: 'critica',
       descrizione: `Hai speso ${unified.spesa_totale.toFixed(0)} euro senza ottenere nessun lead. Il tracciamento potrebbe non funzionare, oppure la landing page non converte.`,
-      impatto: 'Budget sprecato al 100%. Ogni giorno senza lead e' denaro perso.',
+      impatto: "Budget sprecato al 100%. Ogni giorno senza lead e' denaro perso.",
       azione: 'Verifica subito il tracciamento (tab Salute Tracciamento). Controlla che il link mailto funzioni e sia tracciato in GTM.'
     });
   }

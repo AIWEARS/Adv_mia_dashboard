@@ -12,7 +12,7 @@ import { parse } from 'csv-parse/sync';
 import { readFileSync, mkdirSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { authMiddleware } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import { setCsvData, getCsvData, setActiveSource, getActiveSource } from '../services/dataStore.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -37,7 +37,7 @@ const upload = multer({
 });
 
 const router = Router();
-router.use(authMiddleware);
+router.use(authenticateToken);
 
 /**
  * POST /api/csv-import/google
