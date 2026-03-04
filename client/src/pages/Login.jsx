@@ -8,8 +8,8 @@ function Login() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
 
-  const [email, setEmail] = useState('demo@itsmia.it');
-  const [password, setPassword] = useState('mia2024');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -208,12 +208,6 @@ function Login() {
             </button>
           </form>
 
-          {/* Footer */}
-          <div className="mt-8 text-center">
-            <p className="text-xs text-slate-400">
-              Credenziali demo: demo@itsmia.it / mia2024
-            </p>
-          </div>
         </div>
       </div>
     </div>

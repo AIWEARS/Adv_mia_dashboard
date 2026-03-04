@@ -33,7 +33,7 @@ router.post('/login', (req, res) => {
   if (!user) {
     return res.status(401).json({
       error: true,
-      message: 'Email o password errata. Prova con demo@itsmia.it / mia2024'
+      message: 'Email o password errata.'
     });
   }
 
