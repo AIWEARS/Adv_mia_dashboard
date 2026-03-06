@@ -101,4 +101,52 @@ export async function getGtmAnalysis() {
   return fetchApi('/tracking-health/gtm');
 }
 
+/**
+ * Carica CSV Google Ads
+ */
+export async function uploadGoogleCsv(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await fetch(`${BASE_URL}/csv-import/google`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `Errore ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Carica CSV Meta Ads
+ */
+export async function uploadMetaCsv(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await fetch(`${BASE_URL}/csv-import/meta`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `Errore ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Stato importazione CSV
+ */
+export async function getCsvStatus() {
+  return fetchApi('/csv-import/status');
+}
+
+/**
+ * Cancella dati CSV
+ */
+export async function deleteCsvData() {
+  return fetchApi('/csv-import', { method: 'DELETE' });
+}
+
 export default fetchApi;

@@ -49,6 +49,14 @@ function setCache(key, data, ttlMs) {
   cache.set(key, { data, expiresAt: Date.now() + ttlMs });
 }
 
+export function clearCache(key) {
+  if (key) {
+    cache.delete(key);
+  } else {
+    cache.clear();
+  }
+}
+
 function simpleHash(obj) {
   const str = JSON.stringify(obj);
   let hash = 0;
@@ -227,7 +235,10 @@ Azienda: AISEM SRL, Milano, fondata 2023.
 Cerca su Google i principali competitor di MIA nel settore AI fashion photography / AI-generated model imagery / virtual try-on per e-commerce.
 NON suggerire brand di moda su misura - MIA NON vende vestiti, vende un servizio AI di shooting fotografico.
 
-Cerca competitor come: piattaforme che generano foto di modelle con AI per cataloghi e-commerce, virtual photography, AI model generation tools.
+COMPETITOR OBBLIGATORI DA INCLUDERE:
+- Aiora Studio (aiorastudio.com) - competitor diretto, DEVE essere analizzato
+
+Cerca anche altri competitor come: piattaforme che generano foto di modelle con AI per cataloghi e-commerce, virtual photography, AI model generation tools.
 
 Analizza: strategia pubblicitaria, posizionamento, punti di forza/debolezza, stile creativo.
 
