@@ -5,21 +5,28 @@
  * Fallback: se API key mancante o errore, ritorna null (il chiamante usa la logica statica).
  */
 
-import { GoogleGenAI } from '@google/genai';
+let GoogleGenAI;
+try {
+  const mod = await import('@google/genai');
+  GoogleGenAI = mod.GoogleGenAI;
+} catch (e) {
+  console.warn('[GeminiService] @google/genai not available:', e.message);
+  GoogleGenAI = null;
+}
 
 // --- Client singleton ---
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 let client = null;
 
 function getClient() {
-  if (!client && GEMINI_API_KEY) {
+  if (!client && GEMINI_API_KEY && GoogleGenAI) {
     client = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
   }
   return client;
 }
 
 export function isGeminiAvailable() {
-  return !!GEMINI_API_KEY;
+  return !!(GEMINI_API_KEY && GoogleGenAI);
 }
 
 // --- Cache TTL ---

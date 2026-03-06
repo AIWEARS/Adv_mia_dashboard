@@ -1,8 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-dotenv.config();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, '.env') });
 
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
@@ -19,20 +22,9 @@ import './services/dataStore.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  process.env.FRONTEND_URL
-].filter(Boolean);
-
+// CORS - permetti tutto su Vercel (stessa origin) e localhost in dev
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error('Origin non consentito da CORS'));
-  },
+  origin: true,
   credentials: true
 }));
 
