@@ -16,11 +16,17 @@ import { authenticateToken } from '../middleware/auth.js';
 import { setCsvData, getCsvData, setActiveSource, getActiveSource } from '../services/dataStore.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = resolve(__dirname, '..', 'uploads');
+const UPLOAD_DIR = process.env.VERCEL
+  ? '/tmp/uploads'
+  : resolve(__dirname, '..', 'uploads');
 
 // Crea cartella upload se non esiste
-if (!existsSync(UPLOAD_DIR)) {
-  mkdirSync(UPLOAD_DIR, { recursive: true });
+try {
+  if (!existsSync(UPLOAD_DIR)) {
+    mkdirSync(UPLOAD_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn('[CSV Import] Cannot create upload dir:', e.message);
 }
 
 // Configurazione multer
