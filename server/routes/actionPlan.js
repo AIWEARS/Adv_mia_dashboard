@@ -1,23 +1,71 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { actionPlan7Data, actionPlan30Data } from '../data/mockData.js';
+import { generateActionPlan, isGeminiAvailable, buildMockUnified } from '../services/geminiService.js';
+import { getUnifiedData } from '../services/dataStore.js';
 
 const router = express.Router();
 
-// Stato in memoria (in produzione: database)
-const planState = {
+// Stato completamento separato (persiste anche quando AI rigenera il piano)
+const completionState = {
+  '7': {},
+  '30': {}
+};
+
+// Fallback statico
+const staticPlans = {
   '7': JSON.parse(JSON.stringify(actionPlan7Data)),
   '30': JSON.parse(JSON.stringify(actionPlan30Data))
 };
 
+// Applica stato completamento alle azioni
+function applyCompletionState(plan, planType) {
+  if (!plan || !plan.actions) return plan;
+  return {
+    ...plan,
+    actions: plan.actions.map(a => ({
+      ...a,
+      completed: completionState[planType][a.id] ?? a.completed ?? false
+    }))
+  };
+}
+
 // GET /api/action-plan/7 - Piano 7 giorni
-router.get('/7', authenticateToken, (req, res) => {
-  res.json(planState['7']);
+router.get('/7', authenticateToken, async (req, res) => {
+  try {
+    const unified = getUnifiedData();
+    const dataForAI = unified || buildMockUnified();
+
+    if (isGeminiAvailable()) {
+      const aiResult = await generateActionPlan(dataForAI, 7);
+      if (aiResult) {
+        return res.json(applyCompletionState(aiResult, '7'));
+      }
+    }
+    res.json(applyCompletionState(staticPlans['7'], '7'));
+  } catch (error) {
+    console.error('[ActionPlan7] Error:', error.message);
+    res.json(applyCompletionState(staticPlans['7'], '7'));
+  }
 });
 
 // GET /api/action-plan/30 - Piano 30 giorni
-router.get('/30', authenticateToken, (req, res) => {
-  res.json(planState['30']);
+router.get('/30', authenticateToken, async (req, res) => {
+  try {
+    const unified = getUnifiedData();
+    const dataForAI = unified || buildMockUnified();
+
+    if (isGeminiAvailable()) {
+      const aiResult = await generateActionPlan(dataForAI, 30);
+      if (aiResult) {
+        return res.json(applyCompletionState(aiResult, '30'));
+      }
+    }
+    res.json(applyCompletionState(staticPlans['30'], '30'));
+  } catch (error) {
+    console.error('[ActionPlan30] Error:', error.message);
+    res.json(applyCompletionState(staticPlans['30'], '30'));
+  }
 });
 
 // PATCH /api/action-plan/:type/toggle/:id - Segna azione come completata/non completata
@@ -31,24 +79,16 @@ router.patch('/:type/toggle/:id', authenticateToken, (req, res) => {
     });
   }
 
-  const plan = planState[type];
-  const action = plan.actions.find(a => a.id === id);
-
-  if (!action) {
-    return res.status(404).json({
-      error: true,
-      message: `Azione "${id}" non trovata nel piano a ${type} giorni.`
-    });
-  }
-
-  action.completed = !action.completed;
+  // Toggle nello stato di completamento
+  const current = completionState[type][id] ?? false;
+  completionState[type][id] = !current;
 
   res.json({
-    id: action.id,
-    completed: action.completed,
-    message: action.completed
-      ? `Azione "${action.titolo}" completata.`
-      : `Azione "${action.titolo}" riaperta.`
+    id,
+    completed: completionState[type][id],
+    message: completionState[type][id]
+      ? `Azione completata.`
+      : `Azione riaperta.`
   });
 });
 

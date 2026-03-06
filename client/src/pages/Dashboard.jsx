@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   BarChart3,
   AlertTriangle,
@@ -7,12 +6,10 @@ import {
   CalendarDays,
   Users,
   Shield,
-  LogOut,
   Zap,
   RefreshCw,
   Loader2,
 } from 'lucide-react';
-import { useAuth } from '../App';
 import {
   getSummary,
   getDiagnosis,
@@ -37,9 +34,6 @@ const TABS = [
 ];
 
 function Dashboard() {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
   const [activeTab, setActiveTab] = useState('sintesi');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,11 +83,6 @@ function Dashboard() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
 
   const handleToggleAction = async (planType, actionId) => {
     try {
@@ -169,20 +158,10 @@ function Dashboard() {
 
               <div className="hidden sm:flex items-center gap-2 text-sm text-slate-600">
                 <div className="w-8 h-8 bg-mia-blue/10 rounded-full flex items-center justify-center">
-                  <span className="text-mia-blue font-semibold text-xs">
-                    {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                  </span>
+                  <span className="text-mia-blue font-semibold text-xs">M</span>
                 </div>
-                <span className="font-medium">{user?.name || user?.email || 'Utente'}</span>
+                <span className="font-medium">MIA Dashboard</span>
               </div>
-
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-smooth"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Esci</span>
-              </button>
             </div>
           </div>
         </div>

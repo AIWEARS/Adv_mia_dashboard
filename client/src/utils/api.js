@@ -2,14 +2,11 @@ const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 /**
  * Utility per le chiamate API.
- * Gestisce automaticamente il token di autenticazione, il parsing JSON e gli errori.
+ * Gestisce automaticamente il parsing JSON e gli errori.
  */
 async function fetchApi(endpoint, options = {}) {
-  const token = localStorage.getItem('mia_token');
-
   const headers = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
@@ -19,13 +16,6 @@ async function fetchApi(endpoint, options = {}) {
   };
 
   const response = await fetch(`${BASE_URL}${endpoint}`, config);
-
-  if (response.status === 401) {
-    localStorage.removeItem('mia_token');
-    localStorage.removeItem('mia_user');
-    window.location.href = '/login';
-    throw new Error('Sessione scaduta. Effettua nuovamente il login.');
-  }
 
   if (!response.ok) {
     let errorMessage = `Errore ${response.status}`;
@@ -44,25 +34,6 @@ async function fetchApi(endpoint, options = {}) {
   }
 
   return response.json();
-}
-
-/**
- * Login utente
- */
-export async function login(email, password) {
-  const data = await fetchApi('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password }),
-  });
-
-  if (data.token) {
-    localStorage.setItem('mia_token', data.token);
-    if (data.user) {
-      localStorage.setItem('mia_user', JSON.stringify(data.user));
-    }
-  }
-
-  return data;
 }
 
 /**
