@@ -67,10 +67,10 @@ export function buildMockUnified() {
     conversioni: { lead_preventivo: 23, click_webapp: 156, registrazioni: 12, acquisti: 3 },
     costo_per_lead: 123.78, ctr_medio: 2.1, roas: 1.8,
     campagne: [
-      { piattaforma: 'Google Ads', nome: 'Search - Abiti Su Misura', spesa: 412, click: 180, impressioni: 12000 },
-      { piattaforma: 'Google Ads', nome: 'Search - Sartoria', spesa: 300, click: 95, impressioni: 8000 },
-      { piattaforma: 'Meta Ads', nome: 'Awareness - Moda Personalizzata', spesa: 1200, click: 420, impressioni: 15000 },
-      { piattaforma: 'Meta Ads', nome: 'Lead Gen - Preventivo', spesa: 935, click: 285, impressioni: 10000 }
+      { piattaforma: 'Google Ads', nome: 'Search - AI Fashion Photography', spesa: 412, click: 180, impressioni: 12000 },
+      { piattaforma: 'Google Ads', nome: 'Search - Virtual Model Shooting', spesa: 300, click: 95, impressioni: 8000 },
+      { piattaforma: 'Meta Ads', nome: 'Awareness - AI Shooting Digitale', spesa: 1200, click: 420, impressioni: 15000 },
+      { piattaforma: 'Meta Ads', nome: 'Lead Gen - Demo Piattaforma', spesa: 935, click: 285, impressioni: 10000 }
     ],
     dati_giornalieri: []
   };
@@ -104,17 +104,20 @@ export async function generateDiagnosis(unifiedData) {
   if (!ai) return null;
 
   const prompt = `Sei un esperto di advertising digitale specializzato in Google Ads e Meta Ads.
-Analizza i dati delle campagne pubblicitarie di MIA (itsmia.it), un brand di moda su misura/sartoria personalizzata.
+Analizza i dati delle campagne pubblicitarie di MIA (itsmia.it).
 
 DATI CAMPAGNE:
 ${JSON.stringify(unifiedData, null, 2)}
 
 CONTESTO BUSINESS:
-- MIA offre abbigliamento su misura (sartoria personalizzata)
-- Lead principale: click su mailto:info@itsmia.it (richiesta preventivo)
-- Webapp: app.miafashion.it (configuratore abiti)
-- Funnel: Annuncio > Landing (itsmia.it) > Webapp > Registrazione > Acquisto
-- Benchmark settore moda su misura: CPL 80-100 euro, CTR > 2%
+- MIA (itsmia.it) e' una piattaforma AI di shooting digitale per fashion e-commerce
+- Genera foto professionali di modelle che indossano capi di abbigliamento usando AI generativa
+- Target: fashion retailer e aziende e-commerce che necessitano di visual per cataloghi prodotto
+- Due modalita: Self-service (utente crea da solo) e Tailor (MIA gestisce tutto)
+- Webapp: app.miafashion.it (piattaforma di creazione contenuti)
+- Azienda: AISEM SRL, Milano, fondata 2023
+- Funnel: Annuncio > Landing (itsmia.it) > Webapp > Registrazione > Acquisto/Abbonamento
+- Benchmark settore SaaS/AI tools B2B: CPL 50-150 euro, CTR > 1.5%
 
 RISPONDI IN ITALIANO con questo formato JSON esatto:
 {
@@ -140,7 +143,7 @@ RISPONDI IN ITALIANO con questo formato JSON esatto:
 
 Regole:
 - Genera 3-7 issues basate sui dati reali (non inventare numeri)
-- Genera 3-5 suggerimenti pratici e specifici per il settore moda su misura
+- Genera 3-5 suggerimenti pratici e specifici per il settore AI SaaS/fashion tech
 - Usa gravita "critica" solo per problemi gravi (zero lead, budget sprecato)
 - Usa gravita "alta" per problemi importanti (CPL troppo alto, CTR basso)
 - Usa gravita "media" per miglioramenti possibili
@@ -214,15 +217,17 @@ export async function generateCompetitorAnalysis() {
   const ai = getClient();
   if (!ai) return null;
 
-  const prompt = `Sei un analista di marketing digitale specializzato nel settore moda su misura.
+  const prompt = `Sei un analista di marketing digitale specializzato in SaaS e AI tools per il fashion.
 
-Analizza i principali competitor di MIA (itsmia.it) - un brand italiano di moda su misura e sartoria personalizzata.
+MIA (itsmia.it) e' una piattaforma AI italiana di shooting digitale per fashion e-commerce.
+Genera foto professionali di modelle che indossano capi di abbigliamento usando intelligenza artificiale generativa.
+Target: fashion retailer e aziende e-commerce. Due modalita: Self-service e Tailor (servizio gestito).
+Azienda: AISEM SRL, Milano, fondata 2023.
 
-Cerca informazioni aggiornate sui competitor principali nel settore moda su misura online in Italia e Europa:
-- Lanieri (lanieri.com) - abbigliamento maschile su misura online
-- Hockerty (hockerty.com) - abiti su misura online
-- Sumissura (sumissura.com) - abiti donna su misura
-- Atelier Eme (ateliereme.it) - abiti cerimonia
+Cerca su Google i principali competitor di MIA nel settore AI fashion photography / AI-generated model imagery / virtual try-on per e-commerce.
+NON suggerire brand di moda su misura - MIA NON vende vestiti, vende un servizio AI di shooting fotografico.
+
+Cerca competitor come: piattaforme che generano foto di modelle con AI per cataloghi e-commerce, virtual photography, AI model generation tools.
 
 Analizza: strategia pubblicitaria, posizionamento, punti di forza/debolezza, stile creativo.
 
@@ -345,17 +350,18 @@ export async function generateActionPlan(unifiedData, days) {
     ? 'i prossimi 7 giorni. Le azioni devono essere veloci e attuabili subito. Usa "Giorno 1", "Giorno 2", ecc.'
     : 'i prossimi 30 giorni. Le azioni possono essere piu strutturali e strategiche. Usa "Settimana 1", "Settimana 2", ecc.';
 
-  const prompt = `Sei un consulente di advertising digitale per MIA (itsmia.it), brand di moda su misura.
+  const prompt = `Sei un consulente di advertising digitale per MIA (itsmia.it), piattaforma AI di shooting digitale per fashion e-commerce.
 
 DATI CAMPAGNE ATTUALI:
 ${JSON.stringify(unifiedData, null, 2)}
 
 CONTESTO:
-- Lead principale: click su mailto:info@itsmia.it
-- Webapp: app.miafashion.it (configuratore abiti)
-- Funnel: Annuncio > Landing > Webapp > Registrazione > Acquisto
+- MIA genera foto professionali di modelle con AI per cataloghi e-commerce fashion
+- Target: fashion retailer e aziende e-commerce
+- Webapp: app.miafashion.it (piattaforma di creazione contenuti AI)
+- Funnel: Annuncio > Landing (itsmia.it) > Webapp > Registrazione > Acquisto/Abbonamento
 - Piattaforme: Google Ads e Meta Ads
-- Benchmark: CPL 80-100 euro, CTR > 2%
+- Benchmark SaaS/AI tools B2B: CPL 50-150 euro, CTR > 1.5%
 
 Crea un piano d'azione pratico per ${timeframe}
 
@@ -442,7 +448,7 @@ export async function generateMetricComments(unifiedData) {
   const ai = getClient();
   if (!ai) return null;
 
-  const prompt = `Sei un analista di advertising per MIA (moda su misura, itsmia.it).
+  const prompt = `Sei un analista di advertising per MIA (itsmia.it), piattaforma AI di shooting digitale per fashion e-commerce.
 
 DATI CAMPAGNE:
 - Spesa totale: ${unifiedData.spesa_totale} euro (Google: ${unifiedData.spesa_google}, Meta: ${unifiedData.spesa_meta})
@@ -455,7 +461,7 @@ DATI CAMPAGNE:
 - ROAS: ${unifiedData.roas}
 
 Per ciascuna metrica scrivi un commento interpretativo breve (1-2 frasi) in italiano.
-Usa benchmark del settore moda su misura. Sii specifico con i numeri.
+Usa benchmark del settore SaaS/AI tools B2B. Sii specifico con i numeri.
 
 RISPONDI con questo formato JSON:
 {
