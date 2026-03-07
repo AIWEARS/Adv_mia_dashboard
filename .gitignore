@@ -11,3 +11,10 @@ yarn-error.log*
 .idea/
 .vscode/
 .vercel
+
+# Outreach data
+mia-outreach/data/*.csv
+mia-outreach/data/*.json
+!mia-outreach/data/.gitkeep
+mia-outreach/.env
+server/data/outreach-store.json

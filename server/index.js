@@ -15,9 +15,11 @@ import trackingRoutes from './routes/tracking.js';
 import actionPlanRoutes from './routes/actionPlan.js';
 import settingsRoutes from './routes/settings.js';
 import csvImportRoutes from './routes/csvImport.js';
+import outreachRoutes from './routes/outreach.js';
 
-// Inizializza il data store
+// Inizializza data stores
 import './services/dataStore.js';
+import './services/outreachStore.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -40,6 +42,7 @@ app.use('/api/tracking-health', trackingRoutes);
 app.use('/api/action-plan', actionPlanRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/csv-import', csvImportRoutes);
+app.use('/api/outreach', outreachRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -149,4 +149,112 @@ export async function deleteCsvData() {
   return fetchApi('/csv-import', { method: 'DELETE' });
 }
 
+// ===== OUTREACH =====
+
+export async function getOutreachStats() {
+  return fetchApi('/outreach/stats');
+}
+
+export async function getOutreachLeads(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v !== undefined && v !== '' && v !== null) params.set(k, v);
+  });
+  const qs = params.toString();
+  return fetchApi(`/outreach/leads${qs ? '?' + qs : ''}`);
+}
+
+export async function importOutreachLeads(leads) {
+  return fetchApi('/outreach/leads', {
+    method: 'POST',
+    body: JSON.stringify({ leads }),
+  });
+}
+
+export async function importOutreachLeadsCsv(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await fetch(`${BASE_URL}/outreach/leads/csv`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `Errore ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function updateOutreachLead(id, updates) {
+  return fetchApi(`/outreach/leads/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteOutreachLeads(ids) {
+  return fetchApi('/outreach/leads', {
+    method: 'DELETE',
+    body: JSON.stringify({ ids }),
+  });
+}
+
+export async function getOutreachCampaigns() {
+  return fetchApi('/outreach/campaigns');
+}
+
+export async function createOutreachCampaign(campaign) {
+  return fetchApi('/outreach/campaigns', {
+    method: 'POST',
+    body: JSON.stringify(campaign),
+  });
+}
+
+export async function updateOutreachCampaign(id, updates) {
+  return fetchApi(`/outreach/campaigns/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteOutreachCampaign(id) {
+  return fetchApi(`/outreach/campaigns/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function qualifyOutreachLeads(payload) {
+  return fetchApi('/outreach/qualify', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function generateOutreachEmails(payload) {
+  return fetchApi('/outreach/generate-emails', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function discoverOutreachLeads(params) {
+  return fetchApi('/outreach/discover', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+}
+
+export async function getOutreachJobStatus(jobId) {
+  return fetchApi(`/outreach/jobs/${jobId}`);
+}
+
+export async function exportOutreachCampaign(campaignId) {
+  const response = await fetch(`${BASE_URL}/outreach/export/${campaignId}`);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `Errore ${response.status}`);
+  }
+  return response.blob();
+}
+
 export default fetchApi;

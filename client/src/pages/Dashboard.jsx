@@ -6,6 +6,8 @@ import {
   CalendarDays,
   Users,
   Shield,
+  Target,
+  Megaphone,
   Zap,
   RefreshCw,
   Loader2,
@@ -13,8 +15,6 @@ import {
   CheckCircle,
   Trash2,
   FileSpreadsheet,
-  ChevronDown,
-  ChevronUp,
   X,
 } from 'lucide-react';
 import {
@@ -30,10 +30,15 @@ import {
   getCsvStatus,
   deleteCsvData,
 } from '../utils/api';
-import Card from '../components/ui/Card';
-import MetricCard from '../components/ui/MetricCard';
-import StatusBadge from '../components/ui/StatusBadge';
-import ProgressBar from '../components/ui/ProgressBar';
+
+// Tab components
+import TabSintesi from '../components/tabs/TabSintesi';
+import TabDiagnosi from '../components/tabs/TabDiagnosi';
+import TabPiano from '../components/tabs/TabPiano';
+import TabCompetitor from '../components/tabs/TabCompetitor';
+import TabSalute from '../components/tabs/TabSalute';
+import TabLeadPipeline from '../components/tabs/TabLeadPipeline';
+import TabCampagneOutreach from '../components/tabs/TabCampagneOutreach';
 
 const TABS = [
   { id: 'sintesi', label: 'Sintesi', icon: BarChart3 },
@@ -42,6 +47,8 @@ const TABS = [
   { id: 'piano30', label: 'Piano 30 Giorni', icon: CalendarDays },
   { id: 'competitor', label: 'Competitor', icon: Users },
   { id: 'salute', label: 'Salute Tracciamento', icon: Shield },
+  { id: 'leads', label: 'Lead Pipeline', icon: Target },
+  { id: 'outreach', label: 'Campagne Outreach', icon: Megaphone },
 ];
 
 function Dashboard() {
@@ -174,6 +181,10 @@ function Dashboard() {
         return <TabCompetitor data={competitors} />;
       case 'salute':
         return <TabSalute data={trackingHealth} />;
+      case 'leads':
+        return <TabLeadPipeline isActive={activeTab === 'leads'} />;
+      case 'outreach':
+        return <TabCampagneOutreach isActive={activeTab === 'outreach'} />;
       default:
         return null;
     }
@@ -384,452 +395,6 @@ function Dashboard() {
           <div className="animate-fade-in">{renderTabContent()}</div>
         )}
       </main>
-    </div>
-  );
-}
-
-/* ============================
-   TAB: Sintesi
-   ============================ */
-function TabSintesi({ data }) {
-  if (!data) {
-    return <EmptyState message="Nessun dato di sintesi disponibile." />;
-  }
-
-  const metrics = data.metrics || data.kpis || [];
-  const score = data.score ?? data.punteggio ?? null;
-  const interpretation = data.interpretation || data.interpretazione || '';
-
-  return (
-    <div className="space-y-6">
-      {/* Punteggio generale */}
-      {score !== null && (
-        <Card title="Punteggio Generale" icon={<BarChart3 className="w-5 h-5" />}>
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="text-center sm:text-left">
-              <div className="text-5xl font-bold gradient-text">{score}/100</div>
-              {interpretation && (
-                <p className="text-slate-500 mt-2 text-sm max-w-md">{interpretation}</p>
-              )}
-            </div>
-            <div className="flex-1 w-full">
-              <ProgressBar score={score} />
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Griglia metriche */}
-      {metrics.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {metrics.map((metric, index) => (
-            <MetricCard
-              key={metric.id || index}
-              value={metric.value ?? metric.valore}
-              label={metric.label || metric.nome}
-              trend={metric.trend}
-              trendValue={metric.trendValue || metric.variazione}
-              interpretation={metric.interpretation || metric.interpretazione}
-              invertTrend={metric.invertTrend || metric.invertiTrend}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Riepilogo testuale */}
-      {data.summary_text && (
-        <Card title="Riepilogo" icon={<BarChart3 className="w-5 h-5" />}>
-          <p className="text-slate-600 leading-relaxed whitespace-pre-line">
-            {data.summary_text}
-          </p>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-/* ============================
-   TAB: Cosa Migliorare (Diagnosi)
-   ============================ */
-function TabDiagnosi({ data }) {
-  if (!data) {
-    return <EmptyState message="Nessuna diagnosi disponibile." />;
-  }
-
-  const issues = data.issues || data.problemi || [];
-  const suggestions = data.suggestions || data.suggerimenti || [];
-
-  return (
-    <div className="space-y-6">
-      {/* Problemi */}
-      {issues.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-mia-dark mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-mia-yellow" />
-            Problemi Identificati
-          </h2>
-          <div className="space-y-3">
-            {issues.map((issue, index) => (
-              <Card
-                key={issue.id || index}
-                variant="status"
-                status={issue.severity || issue.gravita || 'warning'}
-                expandable
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-slate-800">
-                        {issue.title || issue.titolo}
-                      </h3>
-                      <StatusBadge status={issue.severity || issue.gravita || 'warning'} />
-                    </div>
-                    <p className="text-sm text-slate-600">
-                      {issue.description || issue.descrizione}
-                    </p>
-                    {(issue.impact || issue.impatto) && (
-                      <p className="text-xs text-slate-400 mt-2">
-                        Impatto: {issue.impact || issue.impatto}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Suggerimenti */}
-      {suggestions.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-mia-dark mb-4 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-mia-blue" />
-            Suggerimenti
-          </h2>
-          <div className="space-y-3">
-            {suggestions.map((sug, index) => (
-              <Card key={sug.id || index}>
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-mia-blue/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-mia-blue font-semibold text-sm">{index + 1}</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-800 mb-1">
-                      {sug.title || sug.titolo}
-                    </h3>
-                    <p className="text-sm text-slate-600">
-                      {sug.description || sug.descrizione}
-                    </p>
-                    {(sug.priority || sug.priorita) && (
-                      <div className="mt-2">
-                        <StatusBadge
-                          status={
-                            (sug.priority || sug.priorita) === 'alta'
-                              ? 'critico'
-                              : (sug.priority || sug.priorita) === 'media'
-                              ? 'da_migliorare'
-                              : 'ok'
-                          }
-                          label={`Priorita: ${sug.priority || sug.priorita}`}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {issues.length === 0 && suggestions.length === 0 && (
-        <EmptyState message="Nessun problema rilevato. Ottimo lavoro!" />
-      )}
-    </div>
-  );
-}
-
-/* ============================
-   TAB: Piano 7/30 Giorni
-   ============================ */
-function TabPiano({ data, planType, onToggle }) {
-  if (!data) {
-    return (
-      <EmptyState
-        message={`Nessun piano a ${planType} giorni disponibile.`}
-      />
-    );
-  }
-
-  const actions = data.actions || data.azioni || [];
-  const completedCount = actions.filter((a) => a.completed || a.completata).length;
-  const totalCount = actions.length;
-  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-
-  return (
-    <div className="space-y-6">
-      {/* Barra progresso piano */}
-      <Card
-        title={`Piano a ${planType} Giorni`}
-        icon={
-          planType === '7' ? (
-            <Calendar className="w-5 h-5" />
-          ) : (
-            <CalendarDays className="w-5 h-5" />
-          )
-        }
-      >
-        <div className="flex items-center gap-4 mb-3">
-          <div className="flex-1">
-            <ProgressBar score={progressPercent} />
-          </div>
-          <span className="text-sm font-medium text-slate-600 whitespace-nowrap">
-            {completedCount}/{totalCount} completate
-          </span>
-        </div>
-        {data.description && (
-          <p className="text-sm text-slate-500">{data.description}</p>
-        )}
-      </Card>
-
-      {/* Lista azioni */}
-      <div className="space-y-3">
-        {actions.map((action, index) => {
-          const isCompleted = action.completed || action.completata;
-          return (
-            <Card key={action.id || index}>
-              <div className="flex items-start gap-4">
-                <button
-                  onClick={() =>
-                    onToggle(planType, action.id || index)
-                  }
-                  className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-smooth ${
-                    isCompleted
-                      ? 'bg-mia-green border-mia-green text-white'
-                      : 'border-slate-300 hover:border-mia-blue'
-                  }`}
-                >
-                  {isCompleted && (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </button>
-                <div className={`flex-1 ${isCompleted ? 'opacity-60' : ''}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3
-                      className={`font-semibold text-slate-800 ${
-                        isCompleted ? 'line-through' : ''
-                      }`}
-                    >
-                      {action.title || action.titolo}
-                    </h3>
-                    {(action.priority || action.priorita) && (
-                      <StatusBadge
-                        status={
-                          (action.priority || action.priorita) === 'alta'
-                            ? 'critico'
-                            : (action.priority || action.priorita) === 'media'
-                            ? 'da_migliorare'
-                            : 'ok'
-                        }
-                        label={action.priority || action.priorita}
-                      />
-                    )}
-                  </div>
-                  <p className="text-sm text-slate-600">
-                    {action.description || action.descrizione}
-                  </p>
-                  {(action.day || action.giorno) && (
-                    <p className="text-xs text-slate-400 mt-2">
-                      Giorno: {action.day || action.giorno}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {actions.length === 0 && (
-        <EmptyState message="Nessuna azione pianificata." />
-      )}
-    </div>
-  );
-}
-
-/* ============================
-   TAB: Competitor
-   ============================ */
-function TabCompetitor({ data }) {
-  if (!data) {
-    return <EmptyState message="Nessun dato sui competitor disponibile." />;
-  }
-
-  const competitorList = data.competitors || data.competitor || [];
-  const insights = data.insights || data.considerazioni || [];
-
-  return (
-    <div className="space-y-6">
-      {/* Lista competitor */}
-      {competitorList.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-mia-dark mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-mia-blue" />
-            Analisi Competitor
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {competitorList.map((comp, index) => (
-              <Card key={comp.id || index}>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-800 text-lg">
-                      {comp.name || comp.nome}
-                    </h3>
-                    {comp.score !== undefined && <ProgressBar score={comp.score} />}
-                  </div>
-                  {(comp.description || comp.descrizione) && (
-                    <p className="text-sm text-slate-600">
-                      {comp.description || comp.descrizione}
-                    </p>
-                  )}
-                  {(comp.strengths || comp.punti_forza) && (
-                    <div>
-                      <span className="text-xs font-semibold text-mia-green uppercase">
-                        Punti di forza
-                      </span>
-                      <p className="text-sm text-slate-600 mt-1">
-                        {Array.isArray(comp.strengths || comp.punti_forza)
-                          ? (comp.strengths || comp.punti_forza).join(', ')
-                          : comp.strengths || comp.punti_forza}
-                      </p>
-                    </div>
-                  )}
-                  {(comp.weaknesses || comp.punti_deboli) && (
-                    <div>
-                      <span className="text-xs font-semibold text-mia-red uppercase">
-                        Punti deboli
-                      </span>
-                      <p className="text-sm text-slate-600 mt-1">
-                        {Array.isArray(comp.weaknesses || comp.punti_deboli)
-                          ? (comp.weaknesses || comp.punti_deboli).join(', ')
-                          : comp.weaknesses || comp.punti_deboli}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Considerazioni */}
-      {insights.length > 0 && (
-        <Card title="Considerazioni Generali" icon={<Zap className="w-5 h-5" />}>
-          <ul className="space-y-2">
-            {insights.map((insight, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-slate-600">
-                <span className="w-1.5 h-1.5 bg-mia-blue rounded-full mt-1.5 flex-shrink-0" />
-                {typeof insight === 'string' ? insight : insight.text || insight.testo}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {competitorList.length === 0 && insights.length === 0 && (
-        <EmptyState message="Nessun dato sui competitor disponibile." />
-      )}
-    </div>
-  );
-}
-
-/* ============================
-   TAB: Salute Tracciamento
-   ============================ */
-function TabSalute({ data }) {
-  if (!data) {
-    return <EmptyState message="Nessun dato sulla salute del tracciamento disponibile." />;
-  }
-
-  const checks = data.checks || data.controlli || [];
-  const overallStatus = data.status || data.stato || 'ok';
-  const score = data.score ?? data.punteggio ?? null;
-
-  return (
-    <div className="space-y-6">
-      {/* Stato generale */}
-      <Card title="Stato Tracciamento" icon={<Shield className="w-5 h-5" />}>
-        <div className="flex items-center gap-4">
-          <StatusBadge status={overallStatus} />
-          {score !== null && (
-            <div className="flex-1">
-              <ProgressBar score={score} />
-            </div>
-          )}
-        </div>
-        {data.summary && (
-          <p className="text-sm text-slate-600 mt-3">{data.summary}</p>
-        )}
-      </Card>
-
-      {/* Lista controlli */}
-      {checks.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-mia-dark mb-4">
-            Controlli Dettagliati
-          </h2>
-          <div className="space-y-3">
-            {checks.map((check, index) => (
-              <Card
-                key={check.id || index}
-                variant="status"
-                status={check.status || check.stato || 'ok'}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-slate-800">
-                        {check.name || check.nome}
-                      </h3>
-                      <StatusBadge status={check.status || check.stato || 'ok'} />
-                    </div>
-                    <p className="text-sm text-slate-600">
-                      {check.description || check.descrizione}
-                    </p>
-                    {(check.details || check.dettagli) && (
-                      <p className="text-xs text-slate-400 mt-2">
-                        {check.details || check.dettagli}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {checks.length === 0 && (
-        <EmptyState message="Nessun controllo di tracciamento disponibile." />
-      )}
-    </div>
-  );
-}
-
-/* ============================
-   Componente Stato Vuoto
-   ============================ */
-function EmptyState({ message }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-        <BarChart3 className="w-8 h-8 text-slate-300" />
-      </div>
-      <p className="text-slate-400 text-sm max-w-sm">{message}</p>
     </div>
   );
 }

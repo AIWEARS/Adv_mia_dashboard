@@ -1,0 +1,92 @@
+{
+  "scoring_weights": {
+    "product_category": {
+      "weight": 25,
+      "description": "Fashion/beauty/luxury = high score",
+      "values": {
+        "fashion_apparel": 25,
+        "fashion_accessories": 23,
+        "luxury_goods": 25,
+        "beauty_cosmetics": 20,
+        "jewelry": 22,
+        "eyewear": 20,
+        "footwear": 22,
+        "sportswear": 18,
+        "home_decor": 10,
+        "other": 5
+      }
+    },
+    "ecommerce_presence": {
+      "weight": 20,
+      "description": "Active ecommerce with product catalog",
+      "values": {
+        "shopify_active": 20,
+        "woocommerce_active": 18,
+        "magento_active": 18,
+        "custom_ecommerce": 15,
+        "marketplace_only": 10,
+        "no_ecommerce": 3
+      }
+    },
+    "photo_quality_gap": {
+      "weight": 20,
+      "description": "Current photo quality vs potential improvement",
+      "values": {
+        "poor_quality": 20,
+        "inconsistent_quality": 18,
+        "decent_quality": 12,
+        "good_quality": 5,
+        "professional_quality": 2
+      }
+    },
+    "company_size": {
+      "weight": 15,
+      "description": "SMB sweet spot: 5-200 employees, 500K-50M revenue",
+      "values": {
+        "startup_1_10": 10,
+        "small_10_50": 15,
+        "medium_50_200": 15,
+        "large_200_plus": 5
+      }
+    },
+    "digital_maturity": {
+      "weight": 10,
+      "description": "Social media activity, ad spend, tech adoption",
+      "values": {
+        "high_digital": 10,
+        "medium_digital": 8,
+        "low_digital": 4,
+        "no_digital": 2
+      }
+    },
+    "geographic_fit": {
+      "weight": 10,
+      "description": "Italy/EU priority markets",
+      "values": {
+        "italy": 10,
+        "eu_major": 8,
+        "eu_other": 6,
+        "uk": 7,
+        "us": 5,
+        "other": 3
+      }
+    }
+  },
+  "thresholds": {
+    "hot": 70,
+    "warm": 50,
+    "cold": 0
+  },
+  "sequence_rules": {
+    "hot": {
+      "emails": 3,
+      "followup": 1,
+      "description": "3 email personalized sequence + 1 breakup follow-up"
+    },
+    "warm": {
+      "emails": 2,
+      "followup": 1,
+      "description": "2 email sequence + 1 follow-up"
+    }
+  }
+}
