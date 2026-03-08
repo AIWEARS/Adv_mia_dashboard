@@ -20,6 +20,18 @@ import {
 } from '../services/outreachGeminiService.js';
 import { discoverLeads } from '../services/leadDiscoveryService.js';
 
+// waitUntil per mantenere vivi i job in background su Vercel serverless
+let waitUntil = (promise) => {}; // no-op in locale
+try {
+  if (process.env.VERCEL) {
+    const mod = await import('@vercel/functions');
+    waitUntil = mod.waitUntil;
+    console.log('[Outreach] waitUntil di Vercel attivato');
+  }
+} catch {
+  // fallback silenzioso
+}
+
 const router = Router();
 router.use(authenticateToken);
 
@@ -237,11 +249,12 @@ router.post('/discover', async (req, res) => {
     const jobId = createJob('discover', limitNum);
     res.json({ jobId, status: 'processing', total: limitNum });
 
-    // Processing in background
-    discoverLeads(jobId, { query, country, category, limit: limitNum, sources }).catch(err => {
+    // Processing in background (waitUntil mantiene vivo il job su Vercel)
+    const discoverPromise = discoverLeads(jobId, { query, country, category, limit: limitNum, sources }).catch(err => {
       console.error('[Outreach] Discovery job failed:', err.message);
       updateJob(jobId, { status: 'failed', error: err.message });
     });
+    waitUntil(discoverPromise);
   } catch (err) {
     console.error('[Outreach] Discover error:', err.message);
     res.status(500).json({ error: err.message });
@@ -278,11 +291,12 @@ router.post('/qualify', async (req, res) => {
     const jobId = createJob('qualify', leadsToQualify.length);
     res.json({ jobId, status: 'processing', total: leadsToQualify.length });
 
-    // Processing in background (non await)
-    processQualification(jobId, leadsToQualify).catch(err => {
+    // Processing in background (waitUntil mantiene vivo il job su Vercel)
+    const qualifyPromise = processQualification(jobId, leadsToQualify).catch(err => {
       console.error('[Outreach] Qualification job failed:', err.message);
       updateJob(jobId, { status: 'failed', error: err.message });
     });
+    waitUntil(qualifyPromise);
   } catch (err) {
     console.error('[Outreach] Qualify error:', err.message);
     res.status(500).json({ error: err.message });
@@ -352,11 +366,12 @@ router.post('/generate-emails', async (req, res) => {
     const jobId = createJob('generate-emails', leadsForEmails.length);
     res.json({ jobId, status: 'processing', total: leadsForEmails.length });
 
-    // Processing in background
-    processEmailGeneration(jobId, leadsForEmails, sequenceType).catch(err => {
+    // Processing in background (waitUntil mantiene vivo il job su Vercel)
+    const emailPromise = processEmailGeneration(jobId, leadsForEmails, sequenceType).catch(err => {
       console.error('[Outreach] Email gen job failed:', err.message);
       updateJob(jobId, { status: 'failed', error: err.message });
     });
+    waitUntil(emailPromise);
   } catch (err) {
     console.error('[Outreach] Generate emails error:', err.message);
     res.status(500).json({ error: err.message });
