@@ -49,9 +49,9 @@ function TabLeadPipeline({ isActive }) {
   const [discoverForm, setDiscoverForm] = useState({
     query: 'fashion brand ecommerce',
     country: 'IT',
-    category: 'Fashion',
+    category: 'fashion',
     limit: 25,
-    sources: ['google']
+    sources: ['google', 'apollo']
   });
   const [selectedLead, setSelectedLead] = useState(null);
   const [activeJob, setActiveJob] = useState(null);
@@ -242,14 +242,25 @@ function TabLeadPipeline({ isActive }) {
       )}
 
       {activeJob && activeJob.status === 'completed' && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-fade-in">
-          <CheckCircle className="w-4 h-4" />
-          {activeJob.type === 'discover'
-            ? `Ricerca completata! ${activeJob.results?.added ?? ''} lead aggiunti${activeJob.results?.filtered_out ? `, ${activeJob.results.filtered_out} scartati dall'AI` : ''}.`
-            : activeJob.type === 'qualify'
-              ? `Qualificazione completata! ${activeJob.total} lead processati.`
-              : `Email generate! ${activeJob.total} lead processati.`
-          }
+        <div className={`${activeJob.results?.added > 0 || activeJob.type !== 'discover' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-amber-50 border-amber-200 text-amber-700'} border px-4 py-3 rounded-xl text-sm animate-fade-in`}>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" />
+            {activeJob.type === 'discover'
+              ? activeJob.results?.added > 0
+                ? `Ricerca completata! ${activeJob.results.added} lead aggiunti${activeJob.results?.filtered_out ? `, ${activeJob.results.filtered_out} scartati dall'AI` : ''}.`
+                : `Ricerca completata ma nessun lead trovato.`
+              : activeJob.type === 'qualify'
+                ? `Qualificazione completata! ${activeJob.total} lead processati.`
+                : `Email generate! ${activeJob.total} lead processati.`
+            }
+          </div>
+          {activeJob.type === 'discover' && activeJob.results?.warnings?.length > 0 && (
+            <div className="mt-2 text-xs text-amber-600">
+              {activeJob.results.warnings.map((w, i) => (
+                <p key={i}>⚠ {w}</p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -422,12 +433,12 @@ function TabLeadPipeline({ isActive }) {
                 onChange={(e) => setDiscoverForm(f => ({ ...f, category: e.target.value }))}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
-                <option value="Fashion">Fashion</option>
-                <option value="Beauty">Beauty</option>
-                <option value="Luxury">Luxury</option>
-                <option value="Accessori">Accessori</option>
-                <option value="Calzature">Calzature</option>
-                <option value="Sportswear">Sportswear</option>
+                <option value="fashion">Fashion</option>
+                <option value="beauty">Beauty</option>
+                <option value="luxury">Luxury</option>
+                <option value="accessori">Accessori</option>
+                <option value="calzature">Calzature</option>
+                <option value="sportswear">Sportswear</option>
               </select>
             </div>
             <div>

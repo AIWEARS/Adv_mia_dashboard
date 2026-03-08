@@ -49,6 +49,24 @@ const upload = multer({
 });
 
 // ============================================================
+// DIAGNOSTICA (verifica configurazione)
+// ============================================================
+
+router.get('/config-check', (req, res) => {
+  try {
+    res.json({
+      apollo_key: !!process.env.APOLLO_API_KEY,
+      gemini_key: !!process.env.GEMINI_API_KEY,
+      vercel: !!process.env.VERCEL,
+      node_env: process.env.NODE_ENV || 'not set',
+      waitUntil_active: !!process.env.VERCEL
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
 // PIPELINE STATS
 // ============================================================
 

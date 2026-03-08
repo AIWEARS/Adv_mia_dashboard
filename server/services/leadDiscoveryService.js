@@ -1,6 +1,6 @@
 /**
  * LEAD DISCOVERY SERVICE
- * Ricerca automatica lead fashion da Apollo.io + Google scraping.
+ * Ricerca automatica lead fashion da Apollo.io + Google/Bing scraping.
  * Enrichment siti web con cheerio + pre-filtering AI con Gemini.
  */
 
@@ -9,18 +9,21 @@ import { addLeads, updateJob, saveStore } from './outreachStore.js';
 import { isOutreachGeminiAvailable } from './outreachGeminiService.js';
 
 const APOLLO_API_KEY = process.env.APOLLO_API_KEY || '';
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 const COUNTRY_LABELS = {
-  IT: 'Italy', ES: 'Spain', FR: 'France', DE: 'Germany', UK: 'United Kingdom', US: 'United States'
+  IT: 'Italy', ES: 'Spain', FR: 'France', DE: 'Germany',
+  UK: 'United Kingdom', US: 'United States',
+  PT: 'Portugal', NL: 'Netherlands'
 };
 
 const CATEGORY_KEYWORDS = {
   fashion: 'fashion apparel clothing brand',
   beauty: 'beauty cosmetics skincare brand',
-  luxury: 'luxury brand designer',
+  luxury: 'luxury brand designer high-end',
   accessori: 'fashion accessories bags jewelry',
-  calzature: 'shoes footwear sneakers brand'
+  calzature: 'shoes footwear sneakers brand',
+  sportswear: 'sportswear activewear athletic brand'
 };
 
 // ============================================================
@@ -29,40 +32,47 @@ const CATEGORY_KEYWORDS = {
 
 async function searchApollo(query, country, category, limit) {
   if (!APOLLO_API_KEY) {
-    console.log('[Discovery] Apollo API key non configurata, skip');
-    return [];
+    console.warn('[Discovery] APOLLO_API_KEY non configurata — skip Apollo search');
+    return { leads: [], warning: 'APOLLO_API_KEY non configurata sul server' };
   }
 
   const leads = [];
   const countryLabel = COUNTRY_LABELS[country] || country;
-  const categoryKw = CATEGORY_KEYWORDS[category] || category;
+  const catKey = (category || 'fashion').toLowerCase();
+  const categoryKw = CATEGORY_KEYWORDS[catKey] || category;
 
   try {
     // Step 1: Cerca aziende
+    console.log(`[Discovery] Apollo search: query="${query} ${categoryKw}", country="${countryLabel}", limit=${limit}`);
     const orgResponse = await fetch('https://api.apollo.io/v1/mixed_companies/search', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache'
+      },
       body: JSON.stringify({
         api_key: APOLLO_API_KEY,
         q_organization_keyword_tags: [`${query} ${categoryKw}`],
         organization_locations: [countryLabel],
-        per_page: Math.min(limit, 100),
+        per_page: Math.min(limit, 25),
         page: 1
       })
     });
 
     if (!orgResponse.ok) {
-      console.error('[Discovery] Apollo org search failed:', orgResponse.status);
-      return [];
+      const errBody = await orgResponse.text().catch(() => '');
+      console.error(`[Discovery] Apollo org search failed: HTTP ${orgResponse.status} — ${errBody.substring(0, 500)}`);
+      return { leads: [], warning: `Apollo API errore ${orgResponse.status}` };
     }
 
     const orgData = await orgResponse.json();
-    const orgs = orgData.organizations || [];
+    const orgs = orgData.organizations || orgData.accounts || [];
+    console.log(`[Discovery] Apollo: ${orgs.length} organizzazioni trovate`);
 
     for (const org of orgs.slice(0, limit)) {
       const lead = {
         company: org.name || '',
-        website: org.website_url || '',
+        website: org.website_url || org.primary_domain ? `https://${org.primary_domain}` : '',
         country: country,
         source: 'apollo',
         estimated_employees: org.estimated_num_employees || 0,
@@ -74,9 +84,10 @@ async function searchApollo(query, country, category, limit) {
         }
       };
 
-      // Step 2: Cerca contatti per questa azienda
+      // Step 2: Cerca contatti per questa azienda (con rate limiting)
       if (org.id) {
         try {
+          await new Promise(r => setTimeout(r, 500)); // rate limit
           const peopleResponse = await fetch('https://api.apollo.io/v1/mixed_people/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -85,7 +96,7 @@ async function searchApollo(query, country, category, limit) {
               organization_ids: [org.id],
               per_page: 3,
               page: 1,
-              person_titles: ['founder', 'ceo', 'cmo', 'marketing manager', 'ecommerce manager', 'head of marketing']
+              person_titles: ['founder', 'ceo', 'cmo', 'marketing manager', 'ecommerce manager', 'head of marketing', 'owner', 'co-founder']
             })
           });
 
@@ -101,17 +112,20 @@ async function searchApollo(query, country, category, limit) {
             }
           }
         } catch (e) {
-          // Skip errore contatto singolo
+          console.warn(`[Discovery] Apollo people search skip per ${org.name}: ${e.message}`);
         }
       }
 
-      leads.push(lead);
+      if (lead.company || lead.website) {
+        leads.push(lead);
+      }
     }
   } catch (err) {
     console.error('[Discovery] Apollo search error:', err.message);
+    return { leads, warning: `Apollo errore: ${err.message}` };
   }
 
-  return leads;
+  return { leads, warning: null };
 }
 
 // ============================================================
@@ -121,72 +135,111 @@ async function searchApollo(query, country, category, limit) {
 async function searchGoogle(query, country, category, limit) {
   const leads = [];
   const countryLabel = COUNTRY_LABELS[country] || country;
-  const categoryKw = CATEGORY_KEYWORDS[category] || category;
+  const catKey = (category || 'fashion').toLowerCase();
+  const categoryKw = CATEGORY_KEYWORDS[catKey] || category;
   const searchQuery = `${query} ${categoryKw} ${countryLabel} ecommerce site`;
+  const skip = ['amazon.', 'ebay.', 'zalando.', 'facebook.', 'instagram.', 'linkedin.', 'twitter.',
+                'youtube.', 'wikipedia.', 'pinterest.', 'tiktok.', 'reddit.', 'google.',
+                'bing.', 'duckduckgo.', 'yahoo.', 'aliexpress.', 'etsy.'];
 
+  const urls = new Set();
+
+  // Tentativo 1: DuckDuckGo HTML
   try {
-    // Usa DuckDuckGo HTML (non richiede API key, meno restrittivo di Google)
     const encodedQuery = encodeURIComponent(searchQuery);
+    console.log(`[Discovery] DuckDuckGo search: "${searchQuery}"`);
     const response = await fetch(`https://html.duckduckgo.com/html/?q=${encodedQuery}`, {
-      headers: { 'User-Agent': USER_AGENT }
+      headers: { 'User-Agent': USER_AGENT },
+      redirect: 'follow'
     });
 
-    if (!response.ok) {
-      console.error('[Discovery] DuckDuckGo search failed:', response.status);
-      return [];
-    }
+    if (response.ok) {
+      const html = await response.text();
+      const $ = cheerio.load(html);
 
-    const html = await response.text();
-    const $ = cheerio.load(html);
-
-    // Estrai URL dai risultati
-    const urls = new Set();
-    $('a.result__a').each((_, el) => {
-      const href = $(el).attr('href') || '';
-      // DuckDuckGo wrappa gli URL, estraiamo l'URL effettivo
-      const match = href.match(/uddg=([^&]+)/);
-      if (match) {
+      // Selettore principale DDG
+      $('a.result__a, a[data-testid="result-title-a"]').each((_, el) => {
+        const href = $(el).attr('href') || '';
+        // DDG wrappa gli URL con uddg=
+        const match = href.match(/uddg=([^&]+)/);
+        const rawUrl = match ? decodeURIComponent(match[1]) : href;
         try {
-          const decoded = decodeURIComponent(match[1]);
-          const url = new URL(decoded);
-          // Filtra risultati non-brand (marketplace, social, news)
-          const skip = ['amazon.', 'ebay.', 'zalando.', 'facebook.', 'instagram.', 'linkedin.', 'twitter.',
-                        'youtube.', 'wikipedia.', 'pinterest.', 'tiktok.', 'reddit.'];
+          const url = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`);
           if (!skip.some(s => url.hostname.includes(s))) {
             urls.add(url.origin);
           }
-        } catch {
-          // URL non valido
-        }
-      }
-    });
-
-    // Anche link diretti
-    $('a.result__url').each((_, el) => {
-      const text = $(el).text().trim();
-      if (text && !text.includes(' ')) {
-        try {
-          const url = new URL(text.startsWith('http') ? text : `https://${text}`);
-          urls.add(url.origin);
         } catch { /* skip */ }
-      }
-    });
-
-    for (const url of [...urls].slice(0, limit)) {
-      const hostname = new URL(url).hostname.replace('www.', '');
-      leads.push({
-        company: hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1),
-        website: url,
-        country: country,
-        source: 'google',
-        product_category: category
       });
+
+      // Link diretti / URL mostrati
+      $('a.result__url, span.result__url').each((_, el) => {
+        const text = $(el).text().trim().split(/\s/)[0];
+        if (text) {
+          try {
+            const url = new URL(text.startsWith('http') ? text : `https://${text}`);
+            if (!skip.some(s => url.hostname.includes(s))) {
+              urls.add(url.origin);
+            }
+          } catch { /* skip */ }
+        }
+      });
+
+      console.log(`[Discovery] DuckDuckGo: ${urls.size} URL trovati`);
+    } else {
+      console.warn(`[Discovery] DuckDuckGo failed: HTTP ${response.status}`);
     }
   } catch (err) {
-    console.error('[Discovery] Google search error:', err.message);
+    console.warn('[Discovery] DuckDuckGo error:', err.message);
   }
 
-  return leads;
+  // Tentativo 2: Bing come fallback se DDG ha trovato poco
+  if (urls.size < 5) {
+    try {
+      const encodedQuery = encodeURIComponent(searchQuery);
+      console.log(`[Discovery] Bing fallback search...`);
+      const response = await fetch(`https://www.bing.com/search?q=${encodedQuery}&count=30`, {
+        headers: {
+          'User-Agent': USER_AGENT,
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'en-US,en;q=0.9'
+        },
+        redirect: 'follow'
+      });
+
+      if (response.ok) {
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        $('li.b_algo h2 a, .b_algo a').each((_, el) => {
+          const href = $(el).attr('href') || '';
+          try {
+            const url = new URL(href);
+            if (!skip.some(s => url.hostname.includes(s)) && url.protocol === 'https:') {
+              urls.add(url.origin);
+            }
+          } catch { /* skip */ }
+        });
+
+        console.log(`[Discovery] Bing: totale ${urls.size} URL dopo merge`);
+      }
+    } catch (err) {
+      console.warn('[Discovery] Bing fallback error:', err.message);
+    }
+  }
+
+  for (const url of [...urls].slice(0, limit)) {
+    const hostname = new URL(url).hostname.replace('www.', '');
+    const name = hostname.split('.')[0];
+    leads.push({
+      company: name.charAt(0).toUpperCase() + name.slice(1),
+      website: url,
+      country: country,
+      source: 'google',
+      product_category: category
+    });
+  }
+
+  return { leads, warning: urls.size === 0 ? 'Nessun risultato da motori di ricerca' : null };
 }
 
 // ============================================================
@@ -405,20 +458,39 @@ export async function discoverLeads(jobId, params) {
   const { query = 'fashion brand', country = 'IT', category = 'fashion', limit = 25, sources = ['apollo', 'google'] } = params;
 
   let allLeads = [];
+  const warnings = [];
 
   // Fase 1: Ricerca
   updateJob(jobId, { progress: 0, phase: 'searching' });
+  console.log(`[Discovery] Start: query="${query}", country=${country}, category=${category}, limit=${limit}, sources=${sources.join(',')}`);
 
   if (sources.includes('apollo')) {
-    const apolloLeads = await searchApollo(query, country, category, limit);
-    console.log(`[Discovery] Apollo: ${apolloLeads.length} lead trovati`);
-    allLeads.push(...apolloLeads);
+    const apolloResult = await searchApollo(query, country, category, limit);
+    console.log(`[Discovery] Apollo: ${apolloResult.leads.length} lead trovati`);
+    allLeads.push(...apolloResult.leads);
+    if (apolloResult.warning) warnings.push(apolloResult.warning);
   }
 
   if (sources.includes('google')) {
-    const googleLeads = await searchGoogle(query, country, category, limit);
-    console.log(`[Discovery] Google: ${googleLeads.length} lead trovati`);
-    allLeads.push(...googleLeads);
+    const googleResult = await searchGoogle(query, country, category, limit);
+    console.log(`[Discovery] Google: ${googleResult.leads.length} lead trovati`);
+    allLeads.push(...googleResult.leads);
+    if (googleResult.warning) warnings.push(googleResult.warning);
+  }
+
+  // Se nessuna fonte ha trovato nulla, riporta nel job
+  if (allLeads.length === 0) {
+    console.warn(`[Discovery] Nessun lead trovato. Warnings: ${warnings.join('; ')}`);
+    updateJob(jobId, {
+      status: 'completed',
+      progress: 0,
+      phase: 'done',
+      results: {
+        found: 0, enriched: 0, filtered_out: 0, added: 0, duplicates: 0,
+        warnings
+      }
+    });
+    return;
   }
 
   // Deduplica per website
@@ -437,12 +509,16 @@ export async function discoverLeads(jobId, params) {
   // Fase 2: Enrichment
   let enriched = 0;
   for (const lead of allLeads) {
-    await enrichLead(lead);
+    try {
+      await enrichLead(lead);
+    } catch (err) {
+      console.warn(`[Discovery] Enrichment failed for ${lead.website}: ${err.message}`);
+    }
     enriched++;
     updateJob(jobId, { progress: enriched, phase: 'enriching' });
-    // Rate limiting: 1.5s tra richieste
+    // Rate limiting: 1s tra richieste
     if (enriched < allLeads.length) {
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
 
@@ -478,8 +554,10 @@ export async function discoverLeads(jobId, params) {
       enriched,
       filtered_out: filteredOut,
       added: result.added,
-      duplicates: result.duplicates
+      duplicates: result.duplicates,
+      warnings
     }
   });
   saveStore();
+  console.log(`[Discovery] Completato: ${result.added} lead aggiunti, ${result.duplicates} duplicati, ${filteredOut} scartati`);
 }
