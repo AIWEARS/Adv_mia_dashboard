@@ -42,56 +42,48 @@ function TabCampagneOutreach({ isActive }) {
   const loadCampaigns = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getOutreachCampaigns();
-      let serverCampaigns = data.campaigns || [];
-
-      // Cold-instance fallback: se il server e' vuoto, ri-crea le campagne da localStorage
       const savedCampaigns = JSON.parse(localStorage.getItem('mia_campaigns') || '[]');
-      if (serverCampaigns.length === 0 && savedCampaigns.length > 0) {
-        console.log(`[Campagne] Server vuoto, ri-creo ${savedCampaigns.length} campagne da localStorage`);
-        for (const camp of savedCampaigns) {
-          try {
-            await createOutreachCampaign({ name: camp.name, id: camp.id });
-          } catch {}
+      const allCachedLeads = JSON.parse(localStorage.getItem('mia_discovered_leads') || '[]');
+      let serverCampaigns = [];
+
+      try {
+        const data = await getOutreachCampaigns();
+        serverCampaigns = data.campaigns || [];
+      } catch {}
+
+      // Calcola conteggi reali dalle lead in localStorage
+      const enrichLocal = (camp) => {
+        const localLeads = allCachedLeads.filter(l => l.campaign_id === camp.id);
+        return {
+          ...camp,
+          status: camp.status || 'emails_ready',
+          lead_count: Math.max(camp.lead_count || 0, localLeads.length),
+          email_ready_count: Math.max(camp.email_ready_count || 0, localLeads.filter(l => l.email_body_1).length),
+          qualified_count: camp.qualified_count || localLeads.filter(l => l.icp_score >= 50).length,
+          exported_count: camp.exported_count || localLeads.filter(l => l.status === 'exported').length
+        };
+      };
+
+      // Se il server ha campagne, usale come base e integra con localStorage
+      if (serverCampaigns.length > 0) {
+        const merged = serverCampaigns.map(sc => enrichLocal(sc));
+        // Aggiungi campagne solo in localStorage
+        for (const local of savedCampaigns) {
+          if (!merged.find(m => m.id === local.id)) {
+            merged.push(enrichLocal(local));
+          }
         }
-        // Ricarica dal server dopo re-import
-        const fresh = await getOutreachCampaigns();
-        serverCampaigns = fresh.campaigns || [];
+        setCampaigns(merged);
+      } else if (savedCampaigns.length > 0) {
+        // Server vuoto — usa solo localStorage (non ri-creare sul server)
+        setCampaigns(savedCampaigns.map(c => enrichLocal(c)));
+      } else {
+        setCampaigns([]);
       }
-
-      // Merge: aggiungi info localStorage se il server ha lead_count=0 (cold instance, lead non ancora re-importati)
-      const merged = serverCampaigns.map(sc => {
-        const local = savedCampaigns.find(lc => lc.id === sc.id);
-        if (local && sc.lead_count === 0) {
-          return { ...sc, lead_count: local.lead_count || 0, email_ready_count: local.email_ready_count || 0 };
-        }
-        return sc;
-      });
-
-      // Aggiungi campagne che sono solo in localStorage (non ancora sul server)
-      for (const local of savedCampaigns) {
-        if (!merged.find(m => m.id === local.id)) {
-          merged.push({
-            ...local,
-            status: local.status || 'emails_ready',
-            lead_count: local.lead_count || 0,
-            email_ready_count: local.email_ready_count || 0,
-            qualified_count: 0, exported_count: 0
-          });
-        }
-      }
-
-      setCampaigns(merged);
     } catch (err) {
       console.error('Campaigns error:', err);
-      // Fallback totale: usa solo localStorage
       const saved = JSON.parse(localStorage.getItem('mia_campaigns') || '[]');
-      if (saved.length > 0) {
-        setCampaigns(saved.map(c => ({
-          ...c, status: c.status || 'emails_ready',
-          qualified_count: 0, exported_count: 0
-        })));
-      }
+      setCampaigns(saved.map(c => ({ ...c, status: c.status || 'emails_ready', qualified_count: 0, exported_count: 0 })));
     } finally {
       setLoading(false);
     }
@@ -130,32 +122,33 @@ function TabCampagneOutreach({ isActive }) {
     setSelectedCampaign(campaign);
     setLeadsLoading(true);
     setExportMsg('');
+
+    // Carica lead da localStorage come base (sempre disponibile)
+    let campLeads = [];
+    try {
+      const allCached = JSON.parse(localStorage.getItem('mia_discovered_leads') || '[]');
+      campLeads = allCached.filter(l => l.campaign_id === campaign.id);
+    } catch {}
+
+    // Prova anche dal server (potrebbe avere dati piu' freschi)
     try {
       const data = await getOutreachLeads({ campaign: campaign.id, limit: 200 });
-      let campLeads = data.leads || [];
-
-      // Cold-instance fallback: se server vuoto, cerca lead in localStorage
-      if (campLeads.length === 0) {
-        try {
-          const allCached = JSON.parse(localStorage.getItem('mia_discovered_leads') || '[]');
-          campLeads = allCached.filter(l => l.campaign_id === campaign.id);
-          if (campLeads.length > 0) {
-            console.log(`[Campagne] Caricati ${campLeads.length} lead da localStorage per campagna ${campaign.id}`);
-          }
-        } catch {}
+      const serverLeads = data.leads || [];
+      if (serverLeads.length > 0) {
+        campLeads = serverLeads; // Server ha i dati, usa quelli
       }
-
-      setCampaignLeads(campLeads);
-    } catch (err) {
-      console.error('Campaign leads error:', err);
-      // Fallback totale
-      try {
-        const allCached = JSON.parse(localStorage.getItem('mia_discovered_leads') || '[]');
-        setCampaignLeads(allCached.filter(l => l.campaign_id === campaign.id));
-      } catch {}
-    } finally {
-      setLeadsLoading(false);
+    } catch {
+      // Server non disponibile o campagna non trovata — usa localStorage
     }
+
+    setCampaignLeads(campLeads);
+    setLeadsLoading(false);
+  };
+
+  // Export CSV client-side (funziona sempre, anche con cold instance Vercel)
+  const csvEscape = (val) => {
+    const s = String(val || '');
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
   };
 
   const handleExport = async () => {
@@ -163,18 +156,56 @@ function TabCampagneOutreach({ isActive }) {
     setExporting(true);
     setExportMsg('');
     try {
-      const blob = await exportOutreachCampaign(selectedCampaign.id);
+      // Usa i lead gia' caricati nel componente (da server o localStorage)
+      const leadsWithEmail = campaignLeads.filter(l => l.email_body_1 && l.contact_email);
+
+      if (leadsWithEmail.length === 0) {
+        setExportMsg('Nessun lead con email e indirizzo email per l\'export. Assicurati che i lead abbiano un contatto email.');
+        return;
+      }
+
+      // Formato Instantly.ai
+      const header = 'email,first_name,last_name,company_name,website,custom1,custom2,custom3,custom4,custom5';
+      const rows = leadsWithEmail.map(l => {
+        const nameParts = (l.contact_name || '').split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        return [
+          csvEscape(l.contact_email),
+          csvEscape(firstName),
+          csvEscape(lastName),
+          csvEscape(l.company),
+          csvEscape(l.website),
+          csvEscape(l.email_body_1),
+          csvEscape(l.email_body_2),
+          csvEscape(l.email_body_3),
+          csvEscape(l.email_body_4),
+          csvEscape(l.country || '')
+        ].join(',');
+      });
+
+      const csv = [header, ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${selectedCampaign.name}_instantly.csv`;
+      a.download = `${selectedCampaign.name || 'campaign'}_instantly.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setExportMsg('CSV esportato con successo!');
-      loadCampaigns();
-      handleSelectCampaign(selectedCampaign);
+
+      // Aggiorna status lead in localStorage
+      try {
+        const cached = JSON.parse(localStorage.getItem('mia_discovered_leads') || '[]');
+        for (const lead of leadsWithEmail) {
+          const idx = cached.findIndex(c => c.id === lead.id);
+          if (idx >= 0) cached[idx].status = 'exported';
+        }
+        localStorage.setItem('mia_discovered_leads', JSON.stringify(cached));
+      } catch {}
+
+      setExportMsg(`CSV esportato: ${leadsWithEmail.length} lead con email pronti per Instantly.ai!`);
     } catch (err) {
       setExportMsg(`Errore: ${err.message}`);
     } finally {
