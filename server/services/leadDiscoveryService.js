@@ -182,7 +182,7 @@ async function searchBrave(searchQuery, urls, countryCode, searchLang = 'en') {
 
     const params = new URLSearchParams({
       q: searchQuery,
-      count: '30',
+      count: '20',
       search_lang: searchLang,
       text_decorations: 'false'
     });
