@@ -205,20 +205,21 @@ function TabLeadPipeline({ isActive }) {
     ];
     let phaseIdx = 0;
 
+    const requestedLimit = parseInt(discoverForm.limit) || 25;
+
     setActiveJob({
       type: 'discover', status: 'processing',
-      progress: 0, total: 100, phase: 'searching'
+      progress: 0, total: requestedLimit, phase: 'searching'
     });
 
     // Timer adattivo: batch grandi impiegano piu' tempo
-    const requestedLimit = parseInt(discoverForm.limit) || 25;
     const phaseInterval = requestedLimit > 30 ? 12000 : 8000;
 
     const progressTimer = setInterval(() => {
       phaseIdx = Math.min(phaseIdx + 1, phases.length - 1);
       const p = phases[phaseIdx];
       setActiveJob(prev => prev?.status === 'processing' ? {
-        ...prev, progress: p.pct, total: 100, phase: p.phase
+        ...prev, progress: Math.round(p.pct / 100 * requestedLimit), total: requestedLimit, phase: p.phase
       } : prev);
     }, phaseInterval);
 
@@ -239,7 +240,7 @@ function TabLeadPipeline({ isActive }) {
 
       setActiveJob({
         type: 'discover', status: 'completed',
-        progress: 100, total: 100, phase: 'done',
+        progress: requestedLimit, total: requestedLimit, phase: 'done',
         results
       });
 
