@@ -374,13 +374,18 @@ async function enrichLead(lead, { quick = false } = {}) {
         }
       }
 
-      // 3. Prova pagina /contatti o /contact (skip in modalita' quick per batch grandi)
-      if (!lead.contact_email && !quick) {
-        for (const contactPath of ['/contatti', '/contact', '/contacts', '/about']) {
+      // 3. Prova pagine contatti
+      // Quick mode (batch grandi): solo 1 pagina (/contatti), timeout 2s
+      // Normal mode: tutte e 4, timeout 3s
+      if (!lead.contact_email) {
+        const contactPaths = quick ? ['/contatti', '/contact'] : ['/contatti', '/contact', '/contacts', '/about'];
+        const contactTimeout = quick ? 2000 : 3000;
+
+        for (const contactPath of contactPaths) {
           try {
             const cUrl = new URL(contactPath, url).href;
             const cController = new AbortController();
-            const cTimeout = setTimeout(() => cController.abort(), 3000);
+            const cTimeout = setTimeout(() => cController.abort(), contactTimeout);
             const cRes = await fetch(cUrl, {
               headers: { 'User-Agent': USER_AGENT },
               redirect: 'follow',
@@ -575,7 +580,7 @@ export async function discoverLeads(params) {
   // Oltre 60 lead: arricchisce solo i primi 60, il resto viene aggiunto con dati base
   const isLargeBatch = allLeads.length > 30;
   const PARALLEL = isLargeBatch ? 6 : 3;
-  const ENRICH_TIMEOUT = isLargeBatch ? 4000 : 8000;
+  const ENRICH_TIMEOUT = isLargeBatch ? 5000 : 8000;
   const MAX_ENRICH = 60;
 
   const leadsToEnrich = allLeads.slice(0, MAX_ENRICH);
