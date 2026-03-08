@@ -646,7 +646,7 @@ function TabLeadPipeline({ isActive }) {
                   className="rounded border-slate-300 text-emerald-600"
                 />
                 <Globe className="w-3.5 h-3.5" />
-                Google Search
+                Web Search (Brave)
               </label>
               <label className="flex items-center gap-2 text-sm text-slate-600">
                 <input
