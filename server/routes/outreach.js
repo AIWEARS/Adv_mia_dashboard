@@ -359,7 +359,7 @@ router.post('/generate-emails', async (req, res) => {
       return res.status(503).json({ error: 'Gemini API non disponibile. Configura GEMINI_API_KEY.' });
     }
 
-    const { leadIds, leads: clientLeads, campaignId, sequenceType = 'hot' } = req.body;
+    const { leadIds, leads: clientLeads, campaignId, campaignName, sequenceType = 'hot' } = req.body;
 
     let leadsForEmails;
     if (leadIds && Array.isArray(leadIds)) {
@@ -382,6 +382,16 @@ router.post('/generate-emails', async (req, res) => {
       return res.status(400).json({ error: 'Nessun lead qualificato per generare email. Esegui prima "Qualifica AI".' });
     }
 
+    // Auto-crea campagna se non fornita — collega i lead automaticamente
+    let targetCampaignId = campaignId;
+    let createdCampaign = null;
+    if (!targetCampaignId) {
+      const name = campaignName || `Campagna ${new Date().toLocaleDateString('it-IT')}`;
+      createdCampaign = addCampaign({ name });
+      targetCampaignId = createdCampaign.id;
+      console.log(`[Outreach] Auto-created campaign: ${name} (${targetCampaignId})`);
+    }
+
     // Processing sincrono
     const emailCount = sequenceType === 'hot' ? 4 : 3;
     const generatedLeads = [];
@@ -399,7 +409,8 @@ router.post('/generate-emails', async (req, res) => {
           email_subject_a: subjects?.variant_a || '',
           email_subject_b: subjects?.variant_b || '',
           ...emails,
-          status: 'email_ready'
+          status: 'email_ready',
+          campaign_id: targetCampaignId
         });
         if (updated) generatedLeads.push(updated);
       } catch (err) {
@@ -412,7 +423,8 @@ router.post('/generate-emails', async (req, res) => {
       status: 'completed',
       total: leadsForEmails.length,
       generated: generatedLeads.length,
-      leads: generatedLeads
+      leads: generatedLeads,
+      campaign: createdCampaign || (targetCampaignId ? { id: targetCampaignId } : null)
     });
   } catch (err) {
     console.error('[Outreach] Generate emails error:', err.message);

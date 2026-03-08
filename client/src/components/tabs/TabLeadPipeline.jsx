@@ -333,6 +333,7 @@ function TabLeadPipeline({ isActive }) {
       const result = await generateOutreachEmails({
         leadIds: selectedIds,
         leads: cachedLeads.length > 0 ? cachedLeads : leads.filter(l => selectedIds.includes(l.id))
+        // campaignId non passato → il backend auto-crea una campagna
       });
 
       // Aggiorna cache locale
@@ -344,13 +345,18 @@ function TabLeadPipeline({ isActive }) {
         try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
       }
 
+      const campaignInfo = result.campaign
+        ? ` Campagna "${result.campaign.name || 'creata'}" pronta in tab Campagne Outreach.`
+        : '';
+
       setActiveJob({
         type: 'generate-emails', status: 'completed', progress: 100, total: 100,
-        results: result
+        results: result,
+        campaignInfo
       });
       loadLeads();
       loadStats();
-      setTimeout(() => setActiveJob(null), 5000);
+      setTimeout(() => setActiveJob(null), 8000);
     } catch (err) {
       console.error('Email gen error:', err);
       setActiveJob({ type: 'generate-emails', status: 'failed', error: err.message });
@@ -419,7 +425,7 @@ function TabLeadPipeline({ isActive }) {
                 : `Ricerca completata ma nessun lead trovato.`
               : activeJob.type === 'qualify'
                 ? `Qualificazione completata! ${activeJob.results?.length || 0} lead qualificati con score ICP.`
-                : `Email generate per ${activeJob.results?.generated || activeJob.results?.leads?.length || 0} lead!`
+                : `Email generate per ${activeJob.results?.generated || activeJob.results?.leads?.length || 0} lead!${activeJob.campaignInfo || ' Vai a Campagne Outreach per esportare.'}`
             }
           </div>
           {activeJob.type === 'discover' && activeJob.results?.warnings?.length > 0 && (
