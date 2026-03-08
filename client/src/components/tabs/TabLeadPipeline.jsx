@@ -346,6 +346,23 @@ function TabLeadPipeline({ isActive }) {
         try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
       }
 
+      // Salva campagna in localStorage per cold-instance fallback
+      if (result.campaign) {
+        try {
+          const savedCampaigns = JSON.parse(localStorage.getItem('mia_campaigns') || '[]');
+          const exists = savedCampaigns.find(c => c.id === result.campaign.id);
+          if (!exists) {
+            savedCampaigns.push({
+              ...result.campaign,
+              lead_count: result.generated || selectedIds.length,
+              email_ready_count: result.generated || 0,
+              created_at: result.campaign.created_at || new Date().toISOString()
+            });
+            localStorage.setItem('mia_campaigns', JSON.stringify(savedCampaigns));
+          }
+        } catch {}
+      }
+
       const campaignInfo = result.campaign
         ? ` Campagna "${result.campaign.name || 'creata'}" pronta in tab Campagne Outreach.`
         : '';

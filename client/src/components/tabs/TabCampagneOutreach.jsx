@@ -43,9 +43,55 @@ function TabCampagneOutreach({ isActive }) {
     setLoading(true);
     try {
       const data = await getOutreachCampaigns();
-      setCampaigns(data.campaigns || []);
+      let serverCampaigns = data.campaigns || [];
+
+      // Cold-instance fallback: se il server e' vuoto, ri-crea le campagne da localStorage
+      const savedCampaigns = JSON.parse(localStorage.getItem('mia_campaigns') || '[]');
+      if (serverCampaigns.length === 0 && savedCampaigns.length > 0) {
+        console.log(`[Campagne] Server vuoto, ri-creo ${savedCampaigns.length} campagne da localStorage`);
+        for (const camp of savedCampaigns) {
+          try {
+            await createOutreachCampaign({ name: camp.name, id: camp.id });
+          } catch {}
+        }
+        // Ricarica dal server dopo re-import
+        const fresh = await getOutreachCampaigns();
+        serverCampaigns = fresh.campaigns || [];
+      }
+
+      // Merge: aggiungi info localStorage se il server ha lead_count=0 (cold instance, lead non ancora re-importati)
+      const merged = serverCampaigns.map(sc => {
+        const local = savedCampaigns.find(lc => lc.id === sc.id);
+        if (local && sc.lead_count === 0) {
+          return { ...sc, lead_count: local.lead_count || 0, email_ready_count: local.email_ready_count || 0 };
+        }
+        return sc;
+      });
+
+      // Aggiungi campagne che sono solo in localStorage (non ancora sul server)
+      for (const local of savedCampaigns) {
+        if (!merged.find(m => m.id === local.id)) {
+          merged.push({
+            ...local,
+            status: local.status || 'emails_ready',
+            lead_count: local.lead_count || 0,
+            email_ready_count: local.email_ready_count || 0,
+            qualified_count: 0, exported_count: 0
+          });
+        }
+      }
+
+      setCampaigns(merged);
     } catch (err) {
       console.error('Campaigns error:', err);
+      // Fallback totale: usa solo localStorage
+      const saved = JSON.parse(localStorage.getItem('mia_campaigns') || '[]');
+      if (saved.length > 0) {
+        setCampaigns(saved.map(c => ({
+          ...c, status: c.status || 'emails_ready',
+          qualified_count: 0, exported_count: 0
+        })));
+      }
     } finally {
       setLoading(false);
     }
@@ -86,9 +132,27 @@ function TabCampagneOutreach({ isActive }) {
     setExportMsg('');
     try {
       const data = await getOutreachLeads({ campaign: campaign.id, limit: 200 });
-      setCampaignLeads(data.leads || []);
+      let campLeads = data.leads || [];
+
+      // Cold-instance fallback: se server vuoto, cerca lead in localStorage
+      if (campLeads.length === 0) {
+        try {
+          const allCached = JSON.parse(localStorage.getItem('mia_discovered_leads') || '[]');
+          campLeads = allCached.filter(l => l.campaign_id === campaign.id);
+          if (campLeads.length > 0) {
+            console.log(`[Campagne] Caricati ${campLeads.length} lead da localStorage per campagna ${campaign.id}`);
+          }
+        } catch {}
+      }
+
+      setCampaignLeads(campLeads);
     } catch (err) {
       console.error('Campaign leads error:', err);
+      // Fallback totale
+      try {
+        const allCached = JSON.parse(localStorage.getItem('mia_discovered_leads') || '[]');
+        setCampaignLeads(allCached.filter(l => l.campaign_id === campaign.id));
+      } catch {}
     } finally {
       setLeadsLoading(false);
     }
