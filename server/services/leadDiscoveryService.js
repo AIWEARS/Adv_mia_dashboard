@@ -115,121 +115,280 @@ async function searchApollo(query, country, category, limit) {
 }
 
 // ============================================================
-// GOOGLE SEARCH + SCRAPING
+// WEB SEARCH (DDG Lite + Google + Bing — robusto da cloud IPs)
 // ============================================================
 
+// Blocklist siti da escludere
+const SKIP_DOMAINS = ['amazon.', 'ebay.', 'zalando.', 'facebook.', 'instagram.', 'linkedin.', 'twitter.',
+  'youtube.', 'wikipedia.', 'pinterest.', 'tiktok.', 'reddit.', 'google.',
+  'bing.', 'duckduckgo.', 'yahoo.', 'aliexpress.', 'etsy.', 'asos.',
+  'vogue.', 'elle.', 'forbes.', 'bloomberg.', 'reuters.',
+  'f6s.com', 'crunchbase.', 'glassdoor.', 'indeed.',
+  'ecommerceitalia.', 'marketing4ecommerce.', 'shopify.com',
+  'woocommerce.com', 'bigcommerce.com', 'squarespace.com',
+  'gucci.', 'prada.', 'armani.', 'valentino.', 'versace.',
+  'maxmara.', 'dolcegabbana.', 'burberry.', 'chanel.', 'louisvuitton.',
+  'dior.', 'fendi.', 'balenciaga.', 'bottegaveneta.', 'benetton.',
+  'zara.', 'hm.com', 'mango.', 'uniqlo.', 'primark.'];
+
+function extractUrl(raw) {
+  try {
+    const u = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+    if (u.protocol === 'https:' && !SKIP_DOMAINS.some(s => u.hostname.includes(s))) {
+      return u.origin;
+    }
+  } catch {}
+  return null;
+}
+
+// --- DuckDuckGo Lite (POST form, piu' bot-friendly di html.duckduckgo.com) ---
+async function searchDDGLite(searchQuery, urls) {
+  try {
+    console.log(`[Discovery] DDG Lite: "${searchQuery}"`);
+    const response = await fetch('https://lite.duckduckgo.com/lite/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': USER_AGENT,
+        'Accept': 'text/html',
+        'Accept-Language': 'en-US,en;q=0.9'
+      },
+      body: `q=${encodeURIComponent(searchQuery)}`,
+      redirect: 'follow'
+    });
+
+    console.log(`[Discovery] DDG Lite status: ${response.status}, type: ${response.headers.get('content-type')}`);
+    if (!response.ok) return;
+
+    const html = await response.text();
+    console.log(`[Discovery] DDG Lite HTML length: ${html.length}`);
+
+    const $ = cheerio.load(html);
+
+    // DDG Lite: link risultati sono in <a class="result-link"> o <a> dentro <td> con classe result-link
+    let found = 0;
+
+    // Strategia 1: class result-link
+    $('a.result-link').each((_, el) => {
+      const href = $(el).attr('href') || '';
+      const u = extractUrl(href);
+      if (u) { urls.add(u); found++; }
+    });
+
+    // Strategia 2: link con uddg= (formato HTML classico)
+    if (found === 0) {
+      $('a[href*="uddg="]').each((_, el) => {
+        const href = $(el).attr('href') || '';
+        const match = href.match(/uddg=([^&]+)/);
+        if (match) {
+          const decoded = decodeURIComponent(match[1]);
+          const u = extractUrl(decoded);
+          if (u) { urls.add(u); found++; }
+        }
+      });
+    }
+
+    // Strategia 3: tutti i link esterni (fallback generico)
+    if (found === 0) {
+      $('a[href^="http"]').each((_, el) => {
+        const href = $(el).attr('href') || '';
+        if (!href.includes('duckduckgo.com') && !href.includes('duck.co')) {
+          const u = extractUrl(href);
+          if (u) { urls.add(u); found++; }
+        }
+      });
+    }
+
+    console.log(`[Discovery] DDG Lite: ${found} link estratti, ${urls.size} URL totali`);
+  } catch (err) {
+    console.warn(`[Discovery] DDG Lite error: ${err.message}`);
+  }
+}
+
+// --- DuckDuckGo HTML (fallback se Lite non funziona) ---
+async function searchDDGHtml(searchQuery, urls) {
+  try {
+    console.log(`[Discovery] DDG HTML: "${searchQuery}"`);
+    const response = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}`, {
+      headers: {
+        'User-Agent': USER_AGENT,
+        'Accept': 'text/html',
+        'Accept-Language': 'en-US,en;q=0.9'
+      },
+      redirect: 'follow'
+    });
+
+    console.log(`[Discovery] DDG HTML status: ${response.status}`);
+    if (!response.ok) return;
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    let found = 0;
+
+    // Selettori multipli per DDG HTML
+    $('a.result__a, a[href*="uddg="], .result a[href]').each((_, el) => {
+      const href = $(el).attr('href') || '';
+      const match = href.match(/uddg=([^&]+)/);
+      if (match) {
+        const decoded = decodeURIComponent(match[1]);
+        const u = extractUrl(decoded);
+        if (u) { urls.add(u); found++; }
+      }
+    });
+
+    console.log(`[Discovery] DDG HTML: ${found} link, ${urls.size} URL totali`);
+  } catch (err) {
+    console.warn(`[Discovery] DDG HTML error: ${err.message}`);
+  }
+}
+
+// --- Google Search diretto ---
+async function searchGoogleDirect(searchQuery, urls) {
+  try {
+    console.log(`[Discovery] Google: "${searchQuery}"`);
+    const response = await fetch(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&num=30&hl=en`, {
+      headers: {
+        'User-Agent': USER_AGENT,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      },
+      redirect: 'follow'
+    });
+
+    console.log(`[Discovery] Google status: ${response.status}`);
+    if (!response.ok) return;
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    let found = 0;
+
+    // Google: link nei risultati contengono /url?q=URL_REALE o href diretto
+    $('a[href*="/url?q="]').each((_, el) => {
+      const href = $(el).attr('href') || '';
+      const match = href.match(/\/url\?q=([^&]+)/);
+      if (match) {
+        const decoded = decodeURIComponent(match[1]);
+        const u = extractUrl(decoded);
+        if (u) { urls.add(u); found++; }
+      }
+    });
+
+    // Fallback: cerca link diretti nei div risultati
+    if (found === 0) {
+      $('a[href^="https://"]').each((_, el) => {
+        const href = $(el).attr('href') || '';
+        if (!href.includes('google.') && !href.includes('gstatic.') && !href.includes('googleapis.')) {
+          const u = extractUrl(href);
+          if (u) { urls.add(u); found++; }
+        }
+      });
+    }
+
+    console.log(`[Discovery] Google: ${found} link, ${urls.size} URL totali`);
+  } catch (err) {
+    console.warn(`[Discovery] Google error: ${err.message}`);
+  }
+}
+
+// --- Bing Search ---
+async function searchBing(searchQuery, urls) {
+  try {
+    console.log(`[Discovery] Bing: "${searchQuery}"`);
+    const response = await fetch(`https://www.bing.com/search?q=${encodeURIComponent(searchQuery)}&count=30`, {
+      headers: {
+        'User-Agent': USER_AGENT,
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9'
+      },
+      redirect: 'follow'
+    });
+
+    console.log(`[Discovery] Bing status: ${response.status}`);
+    if (!response.ok) return;
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    let found = 0;
+
+    // Bing: URL in <cite> elementi o link diretti in risultati
+    $('li.b_algo cite').each((_, el) => {
+      let text = $(el).text().trim().split(/\s*[›»]\s*/)[0].trim();
+      if (text) {
+        const u = extractUrl(text);
+        if (u) { urls.add(u); found++; }
+      }
+    });
+
+    // Fallback: link diretti in risultati Bing
+    if (found === 0) {
+      $('li.b_algo a[href^="https://"]').each((_, el) => {
+        const href = $(el).attr('href') || '';
+        if (!href.includes('bing.') && !href.includes('microsoft.')) {
+          const u = extractUrl(href);
+          if (u) { urls.add(u); found++; }
+        }
+      });
+    }
+
+    console.log(`[Discovery] Bing: ${found} link, ${urls.size} URL totali`);
+  } catch (err) {
+    console.warn(`[Discovery] Bing error: ${err.message}`);
+  }
+}
+
+// --- Orchestratore ricerca web ---
 async function searchGoogle(query, country, category, limit) {
   const leads = [];
   const countryLabel = COUNTRY_LABELS[country] || country;
   const catKey = (category || 'fashion').toLowerCase();
-  const categoryKw = CATEGORY_KEYWORDS[catKey] || category;
-
-  // Skip aggregatori, marketplace, social, motori di ricerca
-  const skip = ['amazon.', 'ebay.', 'zalando.', 'facebook.', 'instagram.', 'linkedin.', 'twitter.',
-                'youtube.', 'wikipedia.', 'pinterest.', 'tiktok.', 'reddit.', 'google.',
-                'bing.', 'duckduckgo.', 'yahoo.', 'aliexpress.', 'etsy.', 'asos.',
-                'vogue.', 'elle.', 'forbes.', 'bloomberg.', 'reuters.',
-                'f6s.com', 'crunchbase.', 'glassdoor.', 'indeed.',
-                'ecommerceitalia.', 'marketing4ecommerce.', 'shopify.com',
-                'woocommerce.com', 'bigcommerce.com', 'squarespace.com',
-                // Grandi brand di lusso (l'utente vuole PMI, non marchi famosi)
-                'gucci.', 'prada.', 'armani.', 'valentino.', 'versace.',
-                'maxmara.', 'dolcegabbana.', 'burberry.', 'chanel.', 'louisvuitton.',
-                'dior.', 'fendi.', 'balenciaga.', 'bottegaveneta.', 'benetton.',
-                'zara.', 'hm.com', 'mango.', 'uniqlo.', 'primark.'];
-
   const urls = new Set();
 
-  // Query specifiche per trovare PICCOLI/MEDI brand con ecommerce (non grandi marchi famosi)
+  // Query mirate per PMI fashion
   const queries = [
-    `small ${catKey} brand ${countryLabel} online store ecommerce`,
-    `independent ${catKey} ecommerce ${countryLabel} shop`,
-    `emerging ${catKey} brand ${countryLabel} online shop -luxury -outlet -marketplace`
+    `${catKey} brand ${countryLabel} online shop`,
+    `small ${catKey} brand ${countryLabel} ecommerce store`,
+    `independent ${catKey} ${countryLabel} online boutique -luxury -outlet`
   ];
+
+  // Prova tutti i motori in sequenza per la prima query, poi solo quelli che funzionano
+  let workingEngine = null;
 
   for (const searchQuery of queries) {
     if (urls.size >= limit) break;
+    const beforeSize = urls.size;
 
-    // DuckDuckGo HTML search
-    try {
-      const encodedQuery = encodeURIComponent(searchQuery);
-      console.log(`[Discovery] DDG search: "${searchQuery}"`);
-      const response = await fetch(`https://html.duckduckgo.com/html/?q=${encodedQuery}`, {
-        headers: { 'User-Agent': USER_AGENT },
-        redirect: 'follow'
-      });
-
-      if (response.ok) {
-        const html = await response.text();
-        const $ = cheerio.load(html);
-
-        // Estrai URL reali dai link DDG (parametro uddg=)
-        $('a.result__a').each((_, el) => {
-          const href = $(el).attr('href') || '';
-          const match = href.match(/uddg=([^&]+)/);
-          if (match) {
-            try {
-              const decoded = decodeURIComponent(match[1]);
-              const url = new URL(decoded);
-              if (!skip.some(s => url.hostname.includes(s)) && url.protocol === 'https:') {
-                urls.add(url.origin);
-              }
-            } catch { /* skip */ }
-          }
-        });
-
-        console.log(`[Discovery] DDG: ${urls.size} URL totali dopo query`);
-      } else {
-        console.warn(`[Discovery] DDG failed: HTTP ${response.status}`);
-      }
-    } catch (err) {
-      console.warn('[Discovery] DDG error:', err.message);
+    // 1. DDG Lite (piu' probabile che funzioni da cloud)
+    if (!workingEngine || workingEngine === 'ddg-lite') {
+      await searchDDGLite(searchQuery, urls);
+      if (urls.size > beforeSize) { workingEngine = 'ddg-lite'; continue; }
     }
 
-    // Rate limit tra query
-    await new Promise(r => setTimeout(r, 500));
-  }
-
-  // Bing come fallback se DDG ha trovato poco
-  if (urls.size < 5) {
-    try {
-      const bingQuery = `${catKey} brand ${countryLabel} official online store`;
-      const encodedQuery = encodeURIComponent(bingQuery);
-      console.log(`[Discovery] Bing fallback: "${bingQuery}"`);
-      const response = await fetch(`https://www.bing.com/search?q=${encodedQuery}&count=30`, {
-        headers: {
-          'User-Agent': USER_AGENT,
-          'Accept': 'text/html,application/xhtml+xml',
-          'Accept-Language': 'en-US,en;q=0.9'
-        },
-        redirect: 'follow'
-      });
-
-      if (response.ok) {
-        const html = await response.text();
-        const $ = cheerio.load(html);
-
-        // Bing mostra URL reali negli elementi cite
-        $('li.b_algo cite').each((_, el) => {
-          let text = $(el).text().trim().split(/\s*›\s*/)[0].trim();
-          if (text) {
-            try {
-              const url = new URL(text.startsWith('http') ? text : `https://${text}`);
-              if (!skip.some(s => url.hostname.includes(s))) {
-                urls.add(url.origin);
-              }
-            } catch { /* skip */ }
-          }
-        });
-
-        console.log(`[Discovery] Bing: totale ${urls.size} URL dopo merge`);
-      }
-    } catch (err) {
-      console.warn('[Discovery] Bing fallback error:', err.message);
+    // 2. DDG HTML classico
+    if (!workingEngine || workingEngine === 'ddg-html') {
+      await searchDDGHtml(searchQuery, urls);
+      if (urls.size > beforeSize) { workingEngine = 'ddg-html'; continue; }
     }
+
+    // 3. Google diretto
+    if (!workingEngine || workingEngine === 'google') {
+      await searchGoogleDirect(searchQuery, urls);
+      if (urls.size > beforeSize) { workingEngine = 'google'; continue; }
+    }
+
+    // 4. Bing
+    if (!workingEngine || workingEngine === 'bing') {
+      await searchBing(searchQuery, urls);
+      if (urls.size > beforeSize) { workingEngine = 'bing'; continue; }
+    }
+
+    await new Promise(r => setTimeout(r, 300));
   }
 
-  console.log(`[Discovery] Google search totale: ${urls.size} URL unici trovati`);
+  console.log(`[Discovery] Web search totale: ${urls.size} URL unici (motore: ${workingEngine || 'nessuno'})`);
 
   for (const url of [...urls].slice(0, limit)) {
     const hostname = new URL(url).hostname.replace('www.', '');
@@ -243,7 +402,7 @@ async function searchGoogle(query, country, category, limit) {
     });
   }
 
-  return { leads, warning: urls.size === 0 ? 'Nessun risultato da motori di ricerca' : null };
+  return { leads, warning: urls.size === 0 ? 'Nessun risultato da motori di ricerca (possibile blocco IP cloud)' : null };
 }
 
 // ============================================================
