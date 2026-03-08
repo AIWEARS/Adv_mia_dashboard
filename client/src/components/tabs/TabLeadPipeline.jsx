@@ -61,9 +61,10 @@ function TabLeadPipeline({ isActive }) {
   const loadStats = useCallback(async () => {
     try {
       const data = await getOutreachStats();
-      // Se server restituisce 0 ma abbiamo cache locale, calcola stats da cache
-      if (data.total === 0 && allLeadsCache.current.length > 0) {
-        const cached = allLeadsCache.current;
+      const cached = allLeadsCache.current;
+      // Su Vercel serverless, le stats dal server possono essere stale (istanza diversa).
+      // Se la cache locale ha PIU' lead del server, ricalcola stats da cache.
+      if (cached.length > 0 && cached.length > (data.total || 0)) {
         setStats({
           ...data,
           total: cached.length,
@@ -86,15 +87,20 @@ function TabLeadPipeline({ isActive }) {
     try {
       const data = await getOutreachLeads({ ...filters, page, limit: 50 });
       const serverLeads = data.leads || [];
+      const cached = allLeadsCache.current;
 
-      if (serverLeads.length > 0 || allLeadsCache.current.length === 0) {
-        // Server ha dati (istanza calda) oppure niente in cache
+      // Usa server se ha più dati della cache, oppure cache vuota
+      if (serverLeads.length > 0 && (data.total || 0) >= cached.length) {
         setLeads(serverLeads);
         setTotalLeads(data.total || 0);
         setTotalPages(data.totalPages || 1);
-      } else {
-        // Server vuoto ma abbiamo cache locale — filtra client-side
+      } else if (cached.length > 0) {
+        // Cache locale ha più lead (server stale su Vercel) — filtra client-side
         applyLocalFilters();
+      } else {
+        setLeads(serverLeads);
+        setTotalLeads(data.total || 0);
+        setTotalPages(data.totalPages || 1);
       }
     } catch (err) {
       console.error('Leads error:', err);
