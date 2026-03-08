@@ -174,7 +174,7 @@ async function searchGoogle(query, country, category, limit) {
     }
 
     // Rate limit tra query
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 500));
   }
 
   // Bing come fallback se DDG ha trovato poco
@@ -499,13 +499,22 @@ export async function discoverLeads(jobId, params) {
   console.log(`[Discovery] Trovati ${found} lead unici dopo deduplica`);
   updateJob(jobId, { total: found, phase: 'enriching' });
 
-  // Fase 2: Enrichment (parallelizzato x3 per velocita, timeout 5s per sito)
+  // Fase 2: Enrichment (parallelizzato x3, hard timeout 8s per sito incluso body download)
   let enriched = 0;
   const PARALLEL = 3;
+  const ENRICH_TIMEOUT = 8000;
   for (let i = 0; i < allLeads.length; i += PARALLEL) {
     const batch = allLeads.slice(i, i + PARALLEL);
     await Promise.all(batch.map(lead =>
-      enrichLead(lead).catch(err => {
+      Promise.race([
+        enrichLead(lead),
+        new Promise(resolve => setTimeout(() => {
+          console.warn(`[Discovery] Hard timeout for ${lead.website}`);
+          lead.enrichment_data = { ...lead.enrichment_data, error: 'timeout' };
+          lead.status = 'enriched';
+          resolve(lead);
+        }, ENRICH_TIMEOUT))
+      ]).catch(err => {
         console.warn(`[Discovery] Enrichment failed for ${lead.website}: ${err.message}`);
       })
     ));
