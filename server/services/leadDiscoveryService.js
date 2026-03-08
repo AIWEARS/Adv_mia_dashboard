@@ -522,32 +522,40 @@ Criteri FONDAMENTALI - MIA e' per PICCOLI/MEDI brand, NON per grandi aziende fam
 }
 
 // ============================================================
-// ORCHESTRATORE — DISCOVER LEADS (sincrono, ritorna risultati direttamente)
-// Su Vercel Hobby waitUntil ha solo 15s — usiamo maxDuration 60s sincrono.
+// ORCHESTRATORE — DISCOVER LEADS (sincrono, max 55s hard deadline)
+// Vercel Hobby maxDuration=60s — interrompiamo a 50s per sicurezza.
 // ============================================================
 
 export async function discoverLeads(params) {
   const { query = 'fashion brand', country = 'IT', category = 'fashion', limit = 25, sources = ['apollo', 'google'] } = params;
 
+  const START = Date.now();
+  const DEADLINE = 50000; // 50s hard deadline (Vercel max=60s, margine 10s)
+  const elapsed = () => Date.now() - START;
+  const timeLeft = () => DEADLINE - elapsed();
+
   let allLeads = [];
   const warnings = [];
 
-  // Fase 1: Ricerca
+  // Fase 1: Ricerca (Apollo + Brave in parallelo per risparmiare tempo)
   console.log(`[Discovery] Start: query="${query}", country=${country}, category=${category}, limit=${limit}, sources=${sources.join(',')}`);
 
+  const searchPromises = [];
   if (sources.includes('apollo')) {
-    const apolloResult = await searchApollo(query, country, category, limit);
-    console.log(`[Discovery] Apollo: ${apolloResult.leads.length} lead trovati`);
-    allLeads.push(...apolloResult.leads);
-    if (apolloResult.warning) warnings.push(apolloResult.warning);
+    searchPromises.push(searchApollo(query, country, category, limit).then(r => ({ type: 'apollo', ...r })));
+  }
+  if (sources.includes('google')) {
+    searchPromises.push(searchGoogle(query, country, category, limit).then(r => ({ type: 'brave', ...r })));
   }
 
-  if (sources.includes('google')) {
-    const googleResult = await searchGoogle(query, country, category, limit);
-    console.log(`[Discovery] Google: ${googleResult.leads.length} lead trovati`);
-    allLeads.push(...googleResult.leads);
-    if (googleResult.warning) warnings.push(googleResult.warning);
+  const searchResults = await Promise.all(searchPromises);
+  for (const r of searchResults) {
+    console.log(`[Discovery] ${r.type}: ${r.leads.length} lead trovati`);
+    allLeads.push(...r.leads);
+    if (r.warning) warnings.push(r.warning);
   }
+
+  console.log(`[Discovery] Ricerca completata in ${elapsed()}ms`);
 
   // Se nessuna fonte ha trovato nulla
   if (allLeads.length === 0) {
@@ -568,77 +576,97 @@ export async function discoverLeads(params) {
   });
 
   const found = allLeads.length;
-  console.log(`[Discovery] Trovati ${found} lead unici dopo deduplica`);
+  console.log(`[Discovery] ${found} lead unici dopo deduplica, ${timeLeft()}ms rimanenti`);
 
-  // Fase 2: Enrichment — adattivo per batch grandi (max 60s totali su Vercel)
-  // Batch piccoli (<=30): 3 paralleli, 8s timeout, scraping contatti completo
-  // Batch grandi (>30): 6 paralleli, 4s timeout, solo homepage (no /contatti)
-  // Oltre 60 lead: arricchisce solo i primi 60, il resto viene aggiunto con dati base
-  const isLargeBatch = allLeads.length > 30;
-  const PARALLEL = isLargeBatch ? 6 : 3;
-  const ENRICH_TIMEOUT = isLargeBatch ? 5000 : 8000;
-  const MAX_ENRICH = 60;
+  // Fase 2: Enrichment — con deadline globale
+  // Parallelismo aggressivo (6), timeout breve (3s), sempre quick mode
+  const PARALLEL = 6;
+  const ENRICH_TIMEOUT = 3000; // 3s hard timeout per lead
+  const MAX_ENRICH = Math.min(allLeads.length, 40); // Max 40 lead arricchiti
 
   const leadsToEnrich = allLeads.slice(0, MAX_ENRICH);
-  const leadsBasic = allLeads.slice(MAX_ENRICH); // Aggiunti senza enrichment
+  const leadsBasic = allLeads.slice(MAX_ENRICH);
 
   let enriched = 0;
-  console.log(`[Discovery] Enrichment: ${leadsToEnrich.length} lead da arricchire (parallel=${PARALLEL}, timeout=${ENRICH_TIMEOUT}ms, quick=${isLargeBatch}), ${leadsBasic.length} con dati base`);
+  let enrichStopped = false;
+  console.log(`[Discovery] Enrichment: ${leadsToEnrich.length} lead, parallel=${PARALLEL}, timeout=${ENRICH_TIMEOUT}ms`);
 
   for (let i = 0; i < leadsToEnrich.length; i += PARALLEL) {
+    // Check deadline prima di ogni batch
+    if (timeLeft() < 8000) {
+      console.warn(`[Discovery] Deadline vicina (${timeLeft()}ms), stop enrichment a ${enriched}/${leadsToEnrich.length}`);
+      enrichStopped = true;
+      // Segna i rimanenti come non-arricchiti
+      for (let j = i; j < leadsToEnrich.length; j++) {
+        leadsToEnrich[j].status = 'new';
+      }
+      break;
+    }
+
     const batch = leadsToEnrich.slice(i, i + PARALLEL);
     await Promise.all(batch.map(lead =>
       Promise.race([
-        enrichLead(lead, { quick: isLargeBatch }),
+        enrichLead(lead, { quick: true }),
         new Promise(resolve => setTimeout(() => {
-          console.warn(`[Discovery] Hard timeout for ${lead.website}`);
           lead.enrichment_data = { ...lead.enrichment_data, error: 'timeout' };
           lead.status = 'enriched';
           resolve(lead);
         }, ENRICH_TIMEOUT))
-      ]).catch(err => {
-        console.warn(`[Discovery] Enrichment failed for ${lead.website}: ${err.message}`);
-      })
+      ]).catch(() => {})
     ));
     enriched += batch.length;
-    if (i + PARALLEL < leadsToEnrich.length) {
-      await new Promise(r => setTimeout(r, 100));
-    }
   }
 
-  // Lead oltre il cap: aggiungi con dati base (status 'new' — non arricchiti)
+  // Lead oltre il cap
   for (const lead of leadsBasic) {
     lead.status = 'new';
-    enriched++;
   }
 
-  // Merge tutti i lead per il filtraggio AI
   allLeads = [...leadsToEnrich, ...leadsBasic];
+  console.log(`[Discovery] Enrichment completato: ${enriched} arricchiti in ${elapsed()}ms`);
 
-  // Fase 3: Pre-filtering AI (batch piu' grandi per velocizzare)
-  const FILTER_BATCH = isLargeBatch ? 20 : 10;
-  let filteredLeads = [];
+  // Fase 3: Pre-filtering AI — SOLO se c'e' tempo sufficiente (>10s)
+  let filteredOut = 0;
+  let relevant;
 
-  for (let i = 0; i < allLeads.length; i += FILTER_BATCH) {
-    const batch = allLeads.slice(i, i + FILTER_BATCH);
-    const filtered = await preFilterBatch(batch);
-    filteredLeads.push(...filtered);
+  if (timeLeft() > 10000) {
+    console.log(`[Discovery] AI filter: ${timeLeft()}ms disponibili`);
+    const FILTER_BATCH = 20; // Batch grandi per velocita'
+    let filteredLeads = [];
+
+    for (let i = 0; i < allLeads.length; i += FILTER_BATCH) {
+      if (timeLeft() < 5000) {
+        console.warn(`[Discovery] AI filter interrotto per deadline, ${allLeads.length - i} lead non filtrati`);
+        // I lead non filtrati passano tutti
+        for (let j = i; j < allLeads.length; j++) {
+          allLeads[j].ai_relevant = true;
+        }
+        filteredLeads.push(...allLeads.slice(i));
+        break;
+      }
+      const batch = allLeads.slice(i, i + FILTER_BATCH);
+      const filtered = await preFilterBatch(batch);
+      filteredLeads.push(...filtered);
+    }
+
+    relevant = filteredLeads.filter(l => l.ai_relevant);
+    filteredOut = filteredLeads.length - relevant.length;
+    console.log(`[Discovery] AI filter: ${relevant.length} rilevanti, ${filteredOut} scartati`);
+  } else {
+    console.warn(`[Discovery] Skip AI filter (solo ${timeLeft()}ms rimanenti) — tutti i lead accettati`);
+    relevant = allLeads;
+    warnings.push('Filtro AI saltato per limiti di tempo — usa "Qualifica AI" per filtrare');
   }
-
-  const relevant = filteredLeads.filter(l => l.ai_relevant);
-  const filteredOut = filteredLeads.length - relevant.length;
-
-  console.log(`[Discovery] AI filter: ${relevant.length} rilevanti, ${filteredOut} scartati`);
 
   // Fase 4: Salva nello store
   const result = addLeads(relevant.map(l => ({
     ...l,
     source: `auto-discovery-${l.source}`,
-    status: 'enriched'
+    status: l.status === 'new' ? 'new' : 'enriched'
   })));
 
   saveStore();
-  console.log(`[Discovery] Completato: ${result.added} lead aggiunti, ${result.duplicates} duplicati, ${filteredOut} scartati`);
+  console.log(`[Discovery] Completato in ${elapsed()}ms: ${result.added} aggiunti, ${result.duplicates} duplicati`);
 
   return {
     found,
