@@ -56,6 +56,7 @@ async function searchApollo(query, country, category, limit) {
       body: JSON.stringify({
         q_organization_keyword_tags: tags,
         organization_locations: [countryLabel],
+        organization_num_employees_ranges: ["1,10", "11,20", "21,50", "51,100", "101,200", "201,500"],
         per_page: Math.min(limit, 25),
         page: 1
       })
@@ -117,15 +118,20 @@ async function searchGoogle(query, country, category, limit) {
                 'vogue.', 'elle.', 'forbes.', 'bloomberg.', 'reuters.',
                 'f6s.com', 'crunchbase.', 'glassdoor.', 'indeed.',
                 'ecommerceitalia.', 'marketing4ecommerce.', 'shopify.com',
-                'woocommerce.com', 'bigcommerce.com', 'squarespace.com'];
+                'woocommerce.com', 'bigcommerce.com', 'squarespace.com',
+                // Grandi brand di lusso (l'utente vuole PMI, non marchi famosi)
+                'gucci.', 'prada.', 'armani.', 'valentino.', 'versace.',
+                'maxmara.', 'dolcegabbana.', 'burberry.', 'chanel.', 'louisvuitton.',
+                'dior.', 'fendi.', 'balenciaga.', 'bottegaveneta.', 'benetton.',
+                'zara.', 'hm.com', 'mango.', 'uniqlo.', 'primark.'];
 
   const urls = new Set();
 
-  // Usa query multiple e specifiche per trovare brand reali
+  // Query specifiche per trovare PICCOLI/MEDI brand con ecommerce (non grandi marchi famosi)
   const queries = [
-    `"${categoryKw.split(' ')[0]} brand" "${countryLabel}" online shop`,
-    `${catKey} brand ${countryLabel} official store`,
-    `${query} ${catKey} brand ${countryLabel} shop online`
+    `small ${catKey} brand ${countryLabel} online store ecommerce`,
+    `independent ${catKey} ecommerce ${countryLabel} shop`,
+    `emerging ${catKey} brand ${countryLabel} online shop -luxury -outlet -marketplace`
   ];
 
   for (const searchQuery of queries) {
@@ -376,22 +382,24 @@ async function preFilterBatch(leads) {
     site_title: l.enrichment_data?.site_title || '',
     site_description: l.enrichment_data?.site_description || '',
     estimated_sku_count: l.estimated_sku_count || 0,
-    current_photo_quality: l.current_photo_quality || 'unknown'
+    current_photo_quality: l.current_photo_quality || 'unknown',
+    estimated_employees: l.estimated_employees || 0
   }));
 
   const prompt = `Analizza questi ${leadsData.length} potenziali lead per MIA (itsmia.it), piattaforma AI per foto prodotto fashion.
+MIA e' pensata per PICCOLI e MEDI brand fashion/beauty che vendono online, NON per grandi marchi di lusso famosi.
 
 LEAD:
 ${JSON.stringify(leadsData, null, 2)}
 
-Per ognuno rispondi: e' un brand fashion/beauty/lifestyle rilevante con e-commerce attivo che potrebbe beneficiare di foto prodotto AI?
+Per ognuno rispondi: e' un PICCOLO/MEDIO brand fashion/beauty/lifestyle (NON famoso, NON luxury) con e-commerce attivo che potrebbe beneficiare di foto prodotto AI?
 
 Rispondi con un JSON array:
 [{"company": "...", "relevant": true/false, "confidence": 0-100, "reason": "..."}]
 
-Criteri:
-- relevant=true: brand fashion/beauty/accessori CON e-commerce attivo
-- relevant=false: non-fashion (ristoranti, software, servizi), marketplace, luxury brand enormi, no e-commerce
+Criteri FONDAMENTALI - MIA e' per PICCOLI/MEDI brand, NON per grandi aziende famose:
+- relevant=true: piccoli/medi brand fashion/beauty/accessori (sotto 500 dipendenti) CON e-commerce attivo che potrebbero beneficiare di foto prodotto AI
+- relevant=false: brand di lusso famosi e grandi gruppi (Gucci, Prada, Valentino, Armani, Max Mara, Versace, D&G, Burberry, Zara, H&M, Benetton, ecc.), aziende con 500+ dipendenti, non-fashion (ristoranti, software, servizi, B2B industriale), marketplace, aggregatori, siti senza e-commerce attivo
 - confidence: quanto sei sicuro (0-100)`;
 
   try {
@@ -540,7 +548,8 @@ export async function discoverLeads(jobId, params) {
       filtered_out: filteredOut,
       added: result.added,
       duplicates: result.duplicates,
-      warnings
+      warnings,
+      leads: result.leads || []
     }
   });
   saveStore();

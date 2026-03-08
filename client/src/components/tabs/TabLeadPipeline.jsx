@@ -56,11 +56,26 @@ function TabLeadPipeline({ isActive }) {
   const [selectedLead, setSelectedLead] = useState(null);
   const [activeJob, setActiveJob] = useState(null);
   const pollingRef = useRef(null);
+  const allLeadsCache = useRef([]);
 
   const loadStats = useCallback(async () => {
     try {
       const data = await getOutreachStats();
-      setStats(data);
+      // Se server restituisce 0 ma abbiamo cache locale, calcola stats da cache
+      if (data.total === 0 && allLeadsCache.current.length > 0) {
+        const cached = allLeadsCache.current;
+        setStats({
+          ...data,
+          total: cached.length,
+          enriched: cached.filter(l => l.status === 'enriched').length,
+          qualified: cached.filter(l => l.icp_score !== null && l.icp_score >= 50).length,
+          email_ready: cached.filter(l => l.email_body_1).length,
+          exported: cached.filter(l => l.status === 'exported').length,
+          converted: cached.filter(l => l.status === 'converted').length,
+        });
+      } else {
+        setStats(data);
+      }
     } catch (err) {
       console.error('Stats error:', err);
     }
@@ -70,15 +85,58 @@ function TabLeadPipeline({ isActive }) {
     setLoading(true);
     try {
       const data = await getOutreachLeads({ ...filters, page, limit: 50 });
-      setLeads(data.leads || []);
-      setTotalLeads(data.total || 0);
-      setTotalPages(data.totalPages || 1);
+      const serverLeads = data.leads || [];
+
+      if (serverLeads.length > 0 || allLeadsCache.current.length === 0) {
+        // Server ha dati (istanza calda) oppure niente in cache
+        setLeads(serverLeads);
+        setTotalLeads(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+      } else {
+        // Server vuoto ma abbiamo cache locale — filtra client-side
+        applyLocalFilters();
+      }
     } catch (err) {
       console.error('Leads error:', err);
+      if (allLeadsCache.current.length > 0) applyLocalFilters();
     } finally {
       setLoading(false);
     }
+
+    function applyLocalFilters() {
+      let filtered = [...allLeadsCache.current];
+      if (filters.status) filtered = filtered.filter(l => l.status === filters.status);
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        filtered = filtered.filter(l =>
+          (l.company || '').toLowerCase().includes(q) ||
+          (l.contact_name || '').toLowerCase().includes(q) ||
+          (l.contact_email || '').toLowerCase().includes(q)
+        );
+      }
+      if (filters.minScore) {
+        const min = parseInt(filters.minScore);
+        filtered = filtered.filter(l => l.icp_score !== null && l.icp_score >= min);
+      }
+      const start = (page - 1) * 50;
+      setLeads(filtered.slice(start, start + 50));
+      setTotalLeads(filtered.length);
+      setTotalPages(Math.ceil(filtered.length / 50) || 1);
+    }
   }, [filters, page]);
+
+  // Carica cache lead da localStorage (persistenza tra invocazioni Vercel)
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('mia_discovered_leads');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          allLeadsCache.current = parsed;
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     if (isActive) {
@@ -97,6 +155,15 @@ function TabLeadPipeline({ isActive }) {
         if (job.status === 'completed' || job.status === 'failed') {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
+          // Per discover: salva lead in cache locale (workaround Vercel in-memory)
+          if (activeJob.type === 'discover' && job.status === 'completed' && job.results?.leads?.length > 0) {
+            const newLeads = job.results.leads;
+            const existing = allLeadsCache.current;
+            const existingWs = new Set(existing.map(l => (l.website || '').toLowerCase()));
+            const unique = newLeads.filter(l => !existingWs.has((l.website || '').toLowerCase()));
+            allLeadsCache.current = [...existing, ...unique];
+            try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
+          }
           loadLeads();
           loadStats();
           if (job.status === 'completed') {

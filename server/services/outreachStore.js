@@ -151,7 +151,7 @@ export function addLeads(leadsArray) {
 
   store.leads.push(...unique);
   saveStore();
-  return { added: unique.length, duplicates: newLeads.length - unique.length };
+  return { added: unique.length, duplicates: newLeads.length - unique.length, leads: unique };
 }
 
 export function updateLead(id, updates) {
