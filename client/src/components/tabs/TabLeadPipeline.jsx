@@ -270,8 +270,8 @@ function TabLeadPipeline({ isActive }) {
       };
       return labels[phase] || 'Ricerca lead in corso...';
     }
-    if (job.type === 'qualify') return 'Qualificazione AI in corso... (fino a 30s)';
-    return 'Generazione email in corso... (fino a 60s)';
+    if (job.type === 'qualify') return `Qualificazione AI... ${job.progress || 0}/${job.total || '?'}`;
+    return `Generazione email... ${job.progress || 0}/${job.total || '?'}`;
   };
 
   const handleDelete = async () => {
@@ -287,99 +287,175 @@ function TabLeadPipeline({ isActive }) {
   };
 
   const handleQualify = async () => {
-    // Sincrono — awaita risposta diretta (no job polling)
-    const leadsToSend = selectedIds.length > 0 ? selectedIds : leads.map(l => l.id);
-    if (leadsToSend.length === 0) return;
+    const allIds = selectedIds.length > 0 ? selectedIds : leads.map(l => l.id);
+    if (allIds.length === 0) return;
 
-    setActiveJob({ type: 'qualify', status: 'processing', progress: 30, total: 100, phase: 'qualifying' });
+    // Filtra: salta lead già qualificati (hanno score)
+    const idsToQualify = allIds.filter(id => {
+      const cached = allLeadsCache.current.find(l => l.id === id);
+      const inPage = leads.find(l => l.id === id);
+      const lead = cached || inPage;
+      return lead && !lead.icp_score && lead.icp_score !== 0;
+    });
+
+    if (idsToQualify.length === 0) {
+      setActiveJob({ type: 'qualify', status: 'completed', progress: 100, total: 100,
+        results: [] });
+      setTimeout(() => setActiveJob(null), 3000);
+      return;
+    }
+
+    // Batching: max 10 lead per chiamata per stare dentro i 60s di Vercel
+    const BATCH_SIZE = 10;
+    const batches = [];
+    for (let i = 0; i < idsToQualify.length; i += BATCH_SIZE) {
+      batches.push(idsToQualify.slice(i, i + BATCH_SIZE));
+    }
+
+    const total = idsToQualify.length;
+    let processed = 0;
+    let allResults = [];
+
+    setActiveJob({ type: 'qualify', status: 'processing', progress: 0, total, phase: 'qualifying' });
 
     try {
-      // Invia anche i lead objects come fallback per cold instance
-      const cachedLeads = allLeadsCache.current.filter(l => leadsToSend.includes(l.id));
-      const result = await qualifyOutreachLeads({
-        leadIds: leadsToSend,
-        leads: cachedLeads.length > 0 ? cachedLeads : leads
-      });
+      for (const batchIds of batches) {
+        const cachedLeads = allLeadsCache.current.filter(l => batchIds.includes(l.id));
+        const pageLeads = leads.filter(l => batchIds.includes(l.id));
 
-      // Aggiorna cache locale con lead qualificati
-      if (result.results?.length > 0) {
-        for (const qual of result.results) {
-          const cached = allLeadsCache.current.find(l => l.id === qual.id);
-          if (cached) {
-            Object.assign(cached, { icp_score: qual.score, priority: qual.priority, status: 'qualified',
-              pain_point: qual.pain_point, hook: qual.hook, icp_reasons: [qual.fit_reason] });
+        const result = await qualifyOutreachLeads({
+          leadIds: batchIds,
+          leads: cachedLeads.length > 0 ? cachedLeads : pageLeads
+        });
+
+        // Aggiorna cache locale con lead qualificati
+        if (result.results?.length > 0) {
+          allResults.push(...result.results);
+          for (const qual of result.results) {
+            const cached = allLeadsCache.current.find(l => l.id === qual.id);
+            if (cached) {
+              Object.assign(cached, { icp_score: qual.score, priority: qual.priority, status: 'qualified',
+                pain_point: qual.pain_point, hook: qual.hook, icp_reasons: [qual.fit_reason] });
+            }
           }
+          try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
         }
-        try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
+
+        processed += batchIds.length;
+        setActiveJob(prev => prev?.status === 'processing' ? {
+          ...prev, progress: processed, total, phase: `qualifying (${processed}/${total})`
+        } : prev);
       }
 
       setActiveJob({
-        type: 'qualify', status: 'completed', progress: 100, total: 100,
-        results: result.results
+        type: 'qualify', status: 'completed', progress: total, total,
+        results: allResults
       });
       loadLeads();
       loadStats();
       setTimeout(() => setActiveJob(null), 5000);
     } catch (err) {
       console.error('Qualify error:', err);
-      setActiveJob({ type: 'qualify', status: 'failed', error: err.message });
+      setActiveJob({ type: 'qualify', status: 'failed',
+        error: `${err.message} (${processed}/${total} processati)` });
     }
   };
 
   const handleGenerateEmails = async () => {
     if (selectedIds.length === 0) return;
 
-    setActiveJob({ type: 'generate-emails', status: 'processing', progress: 20, total: 100, phase: 'generating' });
+    // Filtra: salta lead che hanno già email pronte
+    const cachedAll = allLeadsCache.current;
+    const idsToProcess = selectedIds.filter(id => {
+      const cached = cachedAll.find(l => l.id === id);
+      const inPage = leads.find(l => l.id === id);
+      const lead = cached || inPage;
+      return lead && !lead.email_body_1; // solo quelli senza email
+    });
+
+    if (idsToProcess.length === 0) {
+      setActiveJob({ type: 'generate-emails', status: 'completed', progress: 100, total: 100,
+        results: { generated: 0 }, campaignInfo: ' Tutti i lead selezionati hanno già le email.' });
+      setTimeout(() => setActiveJob(null), 4000);
+      return;
+    }
+
+    // Batching: max 5 lead per chiamata per stare dentro i 60s di Vercel
+    const BATCH_SIZE = 5;
+    const batches = [];
+    for (let i = 0; i < idsToProcess.length; i += BATCH_SIZE) {
+      batches.push(idsToProcess.slice(i, i + BATCH_SIZE));
+    }
+
+    const total = idsToProcess.length;
+    let processed = 0;
+    let totalGenerated = 0;
+    let lastCampaign = null;
+    let lastCampaignInfo = '';
+
+    setActiveJob({ type: 'generate-emails', status: 'processing', progress: 0, total, phase: 'generating' });
 
     try {
-      const cachedLeads = allLeadsCache.current.filter(l => selectedIds.includes(l.id));
-      const result = await generateOutreachEmails({
-        leadIds: selectedIds,
-        leads: cachedLeads.length > 0 ? cachedLeads : leads.filter(l => selectedIds.includes(l.id))
-        // campaignId non passato → il backend auto-crea una campagna
-      });
+      for (let bi = 0; bi < batches.length; bi++) {
+        const batchIds = batches[bi];
+        const cachedLeads = allLeadsCache.current.filter(l => batchIds.includes(l.id));
+        const pageLeads = leads.filter(l => batchIds.includes(l.id));
 
-      // Aggiorna cache locale
-      if (result.leads?.length > 0) {
-        for (const updated of result.leads) {
-          const idx = allLeadsCache.current.findIndex(l => l.id === updated.id);
-          if (idx >= 0) allLeadsCache.current[idx] = { ...allLeadsCache.current[idx], ...updated };
+        const result = await generateOutreachEmails({
+          leadIds: batchIds,
+          leads: cachedLeads.length > 0 ? cachedLeads : pageLeads,
+          campaignId: lastCampaign?.id // riusa la campagna creata dal primo batch
+        });
+
+        // Aggiorna cache locale
+        if (result.leads?.length > 0) {
+          for (const updated of result.leads) {
+            const idx = allLeadsCache.current.findIndex(l => l.id === updated.id);
+            if (idx >= 0) allLeadsCache.current[idx] = { ...allLeadsCache.current[idx], ...updated };
+          }
+          try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
         }
-        try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
+
+        // Traccia campagna
+        if (result.campaign) lastCampaign = result.campaign;
+
+        processed += batchIds.length;
+        totalGenerated += result.generated || 0;
+        setActiveJob(prev => prev?.status === 'processing' ? {
+          ...prev, progress: processed, total, phase: `generating (${processed}/${total})`
+        } : prev);
       }
 
-      // Salva campagna in localStorage per cold-instance fallback
-      if (result.campaign) {
+      // Salva campagna in localStorage
+      if (lastCampaign) {
         try {
           const savedCampaigns = JSON.parse(localStorage.getItem('mia_campaigns') || '[]');
-          const exists = savedCampaigns.find(c => c.id === result.campaign.id);
+          const exists = savedCampaigns.find(c => c.id === lastCampaign.id);
           if (!exists) {
             savedCampaigns.push({
-              ...result.campaign,
-              lead_count: result.generated || selectedIds.length,
-              email_ready_count: result.generated || 0,
-              created_at: result.campaign.created_at || new Date().toISOString()
+              ...lastCampaign,
+              lead_count: totalGenerated,
+              email_ready_count: totalGenerated,
+              created_at: lastCampaign.created_at || new Date().toISOString()
             });
             localStorage.setItem('mia_campaigns', JSON.stringify(savedCampaigns));
           }
         } catch {}
+        lastCampaignInfo = ` Campagna "${lastCampaign.name || 'creata'}" pronta in tab Campagne Outreach.`;
       }
 
-      const campaignInfo = result.campaign
-        ? ` Campagna "${result.campaign.name || 'creata'}" pronta in tab Campagne Outreach.`
-        : '';
-
       setActiveJob({
-        type: 'generate-emails', status: 'completed', progress: 100, total: 100,
-        results: result,
-        campaignInfo
+        type: 'generate-emails', status: 'completed', progress: total, total,
+        results: { generated: totalGenerated },
+        campaignInfo: lastCampaignInfo
       });
       loadLeads();
       loadStats();
       setTimeout(() => setActiveJob(null), 8000);
     } catch (err) {
       console.error('Email gen error:', err);
-      setActiveJob({ type: 'generate-emails', status: 'failed', error: err.message });
+      setActiveJob({ type: 'generate-emails', status: 'failed',
+        error: `${err.message} (${processed}/${total} processati)` });
     }
   };
 
@@ -522,15 +598,20 @@ function TabLeadPipeline({ isActive }) {
               <>
                 <button
                   onClick={() => {
-                    // Smart "Avanti": se i lead selezionati non sono qualificati → qualifica, altrimenti → genera email
-                    const selectedLeadObjects = leads.filter(l => selectedIds.includes(l.id));
+                    // Smart "Avanti": controlla lo stato dei lead selezionati
                     const cachedSelected = allLeadsCache.current.filter(l => selectedIds.includes(l.id));
-                    const allSelected = cachedSelected.length > 0 ? cachedSelected : selectedLeadObjects;
+                    const pageSelected = leads.filter(l => selectedIds.includes(l.id));
+                    const allSelected = cachedSelected.length > 0 ? cachedSelected : pageSelected;
                     const needsQualify = allSelected.some(l => !l.icp_score && l.icp_score !== 0);
+                    const needsEmail = allSelected.some(l => l.icp_score && !l.email_body_1);
+                    // Priorità: prima qualifica, poi genera email
                     if (needsQualify) {
                       handleQualify();
-                    } else {
+                    } else if (needsEmail) {
                       handleGenerateEmails();
+                    } else {
+                      // Tutti già pronti
+                      handleGenerateEmails(); // mostrerà messaggio "già pronti"
                     }
                   }}
                   disabled={!!activeJob?.status && activeJob.status === 'processing'}
