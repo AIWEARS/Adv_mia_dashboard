@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Target, Upload, Loader2, Search, Filter, Trash2,
+  Upload, Loader2, Search, Trash2,
   CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight,
-  Zap, Mail, X, Download, Users, RefreshCw, Globe, Radar
+  Zap, Mail, X, Radar
 } from 'lucide-react';
 import Card from '../ui/Card';
 import MetricCard from '../ui/MetricCard';
@@ -16,20 +16,22 @@ import {
 } from '../../utils/api';
 
 const STATUS_LABELS = {
-  new: 'Nuovo', enriched: 'Arricchito', qualified: 'Qualificato',
-  email_ready: 'Email Pronte', exported: 'Esportato', contacted: 'Contattato',
-  replied: 'Risposto', converted: 'Convertito', disqualified: 'Scartato'
+  new: 'Nuovo', enriched: 'Nuovo', qualified: 'Qualificato',
+  email_ready: 'Email Pronte', exported: 'Contattato', contacted: 'Contattato',
+  sent: 'Contattato', replied: 'Contattato', converted: 'Contattato',
+  disqualified: 'Scartato'
 };
 
 const STATUS_COLORS = {
   new: 'bg-slate-100 text-slate-700',
-  enriched: 'bg-blue-100 text-blue-700',
+  enriched: 'bg-slate-100 text-slate-700',
   qualified: 'bg-indigo-100 text-indigo-700',
   email_ready: 'bg-purple-100 text-purple-700',
-  exported: 'bg-amber-100 text-amber-700',
-  contacted: 'bg-cyan-100 text-cyan-700',
+  exported: 'bg-emerald-100 text-emerald-700',
+  contacted: 'bg-emerald-100 text-emerald-700',
+  sent: 'bg-emerald-100 text-emerald-700',
   replied: 'bg-emerald-100 text-emerald-700',
-  converted: 'bg-green-100 text-green-700',
+  converted: 'bg-emerald-100 text-emerald-700',
   disqualified: 'bg-red-100 text-red-700'
 };
 
@@ -51,7 +53,7 @@ function TabLeadPipeline({ isActive }) {
     country: 'IT',
     category: 'fashion',
     limit: 25,
-    sources: ['google', 'apollo']
+    sources: ['google']
   });
   const [selectedLead, setSelectedLead] = useState(null);
   const [activeJob, setActiveJob] = useState(null);
@@ -404,12 +406,10 @@ function TabLeadPipeline({ isActive }) {
     <div className="space-y-6">
       {/* Pipeline Stats */}
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <MetricCard value={stats.total} label="Lead Totali" />
+        <div className="grid grid-cols-3 gap-4">
+          <MetricCard value={stats.total} label="Lead Trovati" />
           <MetricCard value={stats.qualified} label="Qualificati" />
-          <MetricCard value={stats.email_ready} label="Email Pronte" />
-          <MetricCard value={stats.exported} label="Esportati" />
-          <MetricCard value={stats.converted} label="Convertiti" />
+          <MetricCard value={stats.email_ready} label="Pronti per Invio" />
         </div>
       )}
 
@@ -483,10 +483,11 @@ function TabLeadPipeline({ isActive }) {
               onChange={(e) => { setFilters(f => ({ ...f, status: e.target.value })); setPage(1); }}
               className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mia-blue/20"
             >
-              <option value="">Tutti gli stati</option>
-              {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
+              <option value="">Tutti</option>
+              <option value="new">Nuovi</option>
+              <option value="qualified">Qualificati</option>
+              <option value="email_ready">Email Pronte</option>
+              <option value="contacted">Contattati</option>
             </select>
             <select
               value={filters.minScore}
@@ -512,37 +513,48 @@ function TabLeadPipeline({ isActive }) {
             </button>
             <button
               onClick={() => { setShowImport(v => !v); setShowDiscover(false); }}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-mia-blue text-white hover:bg-mia-blue/90 transition-smooth"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-smooth"
             >
               <Upload className="w-4 h-4" />
               Importa CSV
             </button>
-            <button
-              onClick={handleQualify}
-              disabled={!!activeJob?.status && activeJob.status === 'processing'}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-smooth disabled:opacity-50"
-            >
-              <Zap className="w-4 h-4" />
-              Qualifica AI
-            </button>
-            {selectedIds.length > 0 && (
+            {selectedIds.length > 0 ? (
               <>
                 <button
-                  onClick={handleGenerateEmails}
+                  onClick={() => {
+                    // Smart "Avanti": se i lead selezionati non sono qualificati → qualifica, altrimenti → genera email
+                    const selectedLeadObjects = leads.filter(l => selectedIds.includes(l.id));
+                    const cachedSelected = allLeadsCache.current.filter(l => selectedIds.includes(l.id));
+                    const allSelected = cachedSelected.length > 0 ? cachedSelected : selectedLeadObjects;
+                    const needsQualify = allSelected.some(l => !l.icp_score && l.icp_score !== 0);
+                    if (needsQualify) {
+                      handleQualify();
+                    } else {
+                      handleGenerateEmails();
+                    }
+                  }}
                   disabled={!!activeJob?.status && activeJob.status === 'processing'}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-smooth disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-mia-blue text-white hover:bg-mia-blue/90 transition-smooth disabled:opacity-50"
                 >
-                  <Mail className="w-4 h-4" />
-                  Genera Email ({selectedIds.length})
+                  <ChevronRight className="w-4 h-4" />
+                  Avanti ({selectedIds.length})
                 </button>
                 <button
                   onClick={handleDelete}
                   className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg text-red-600 hover:bg-red-50 transition-smooth"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Elimina ({selectedIds.length})
                 </button>
               </>
+            ) : (
+              <button
+                onClick={handleQualify}
+                disabled={!!activeJob?.status && activeJob.status === 'processing'}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-smooth disabled:opacity-50"
+              >
+                <Zap className="w-4 h-4" />
+                Qualifica Tutti
+              </button>
             )}
           </div>
         </div>
@@ -590,17 +602,7 @@ function TabLeadPipeline({ isActive }) {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Query di ricerca</label>
-              <input
-                type="text"
-                value={discoverForm.query}
-                onChange={(e) => setDiscoverForm(f => ({ ...f, query: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                placeholder="fashion brand ecommerce"
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Paese</label>
               <select
@@ -627,74 +629,36 @@ function TabLeadPipeline({ isActive }) {
               >
                 <option value="fashion">Fashion</option>
                 <option value="beauty">Beauty</option>
-                <option value="luxury">Luxury</option>
                 <option value="accessori">Accessori</option>
                 <option value="calzature">Calzature</option>
                 <option value="sportswear">Sportswear</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Limite risultati</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Quanti lead</label>
               <select
                 value={discoverForm.limit}
                 onChange={(e) => setDiscoverForm(f => ({ ...f, limit: parseInt(e.target.value) }))}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
-                <option value={10}>10 lead</option>
+                <option value={15}>15 lead</option>
                 <option value={25}>25 lead</option>
                 <option value={50}>50 lead</option>
-                <option value={100}>100 lead</option>
               </select>
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={discoverForm.sources.includes('google')}
-                  onChange={(e) => {
-                    setDiscoverForm(f => ({
-                      ...f,
-                      sources: e.target.checked
-                        ? [...f.sources.filter(s => s !== 'google'), 'google']
-                        : f.sources.filter(s => s !== 'google')
-                    }));
-                  }}
-                  className="rounded border-slate-300 text-emerald-600"
-                />
-                <Globe className="w-3.5 h-3.5" />
-                Web Search (Brave)
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={discoverForm.sources.includes('apollo')}
-                  onChange={(e) => {
-                    setDiscoverForm(f => ({
-                      ...f,
-                      sources: e.target.checked
-                        ? [...f.sources.filter(s => s !== 'apollo'), 'apollo']
-                        : f.sources.filter(s => s !== 'apollo')
-                    }));
-                  }}
-                  className="rounded border-slate-300 text-emerald-600"
-                />
-                Apollo.io
-              </label>
-            </div>
+            <p className="text-xs text-slate-400">
+              Cerca brand su web, arricchisce i dati e filtra con AI solo quelli in target per MIA.
+            </p>
             <button
               onClick={handleDiscover}
-              disabled={discoverForm.sources.length === 0 || !discoverForm.query.trim()}
               className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-smooth disabled:opacity-50"
             >
               <Search className="w-4 h-4" />
               Cerca
             </button>
           </div>
-          <p className="text-xs text-slate-400 mt-3">
-            Cerca brand fashion su web e Apollo.io, arricchisce i dati scrappando i siti, e filtra con AI solo i lead rilevanti per MIA.
-          </p>
         </Card>
       )}
 
@@ -724,8 +688,6 @@ function TabLeadPipeline({ isActive }) {
                     <th className="px-3 py-3 text-left font-medium text-slate-500">Contatto</th>
                     <th className="px-3 py-3 text-left font-medium text-slate-500">Score</th>
                     <th className="px-3 py-3 text-left font-medium text-slate-500">Stato</th>
-                    <th className="px-3 py-3 text-left font-medium text-slate-500">Fonte</th>
-                    <th className="px-3 py-3 text-left font-medium text-slate-500">Paese</th>
                     <th className="px-3 py-3 text-right font-medium text-slate-500">Azioni</th>
                   </tr>
                 </thead>
@@ -760,8 +722,6 @@ function TabLeadPipeline({ isActive }) {
                           {STATUS_LABELS[lead.status] || lead.status}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-slate-500 text-xs">{lead.source}</td>
-                      <td className="px-3 py-3 text-slate-500 text-xs">{lead.country}</td>
                       <td className="px-3 py-3 text-right">
                         <button
                           onClick={() => setSelectedLead(lead)}

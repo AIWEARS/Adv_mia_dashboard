@@ -15,18 +15,18 @@ import {
 } from '../../utils/api';
 
 const CAMPAIGN_STATUS_LABELS = {
-  draft: 'Bozza', emails_ready: 'Email Pronte', exported: 'Esportato',
-  active: 'Attiva', paused: 'In Pausa', completed: 'Completata',
-  sending: 'In Invio', sent: 'Inviata'
+  draft: 'Bozza', emails_ready: 'Pronta', exported: 'Pronta',
+  active: 'Attiva', paused: 'Attiva', completed: 'Completata',
+  sending: 'In Invio', sent: 'Completata'
 };
 
 const CAMPAIGN_STATUS_COLORS = {
   draft: 'bg-slate-100 text-slate-600',
   emails_ready: 'bg-purple-100 text-purple-700',
-  exported: 'bg-amber-100 text-amber-700',
+  exported: 'bg-purple-100 text-purple-700',
   active: 'bg-green-100 text-green-700',
-  paused: 'bg-orange-100 text-orange-700',
-  completed: 'bg-blue-100 text-blue-700',
+  paused: 'bg-green-100 text-green-700',
+  completed: 'bg-emerald-100 text-emerald-700',
   sending: 'bg-indigo-100 text-indigo-700',
   sent: 'bg-emerald-100 text-emerald-700'
 };
@@ -35,12 +35,11 @@ const LEAD_SEND_STATUS = {
   email_ready: { label: 'Pronta', color: 'bg-purple-100 text-purple-700' },
   sending: { label: 'Invio...', color: 'bg-indigo-100 text-indigo-700' },
   sent: { label: 'Inviata', color: 'bg-emerald-100 text-emerald-700' },
-  step1_sent: { label: 'Step 1', color: 'bg-emerald-100 text-emerald-700' },
-  step2_sent: { label: 'Step 2', color: 'bg-teal-100 text-teal-700' },
-  step3_sent: { label: 'Step 3', color: 'bg-cyan-100 text-cyan-700' },
-  step4_sent: { label: 'Step 4', color: 'bg-blue-100 text-blue-700' },
+  step1_sent: { label: 'Inviata', color: 'bg-emerald-100 text-emerald-700' },
+  step2_sent: { label: 'Inviata', color: 'bg-emerald-100 text-emerald-700' },
+  step3_sent: { label: 'Inviata', color: 'bg-emerald-100 text-emerald-700' },
+  step4_sent: { label: 'Inviata', color: 'bg-emerald-100 text-emerald-700' },
   error: { label: 'Errore', color: 'bg-red-100 text-red-700' },
-  exported: { label: 'Esportata', color: 'bg-amber-100 text-amber-700' },
 };
 
 function TabCampagneOutreach({ isActive }) {
@@ -434,32 +433,19 @@ function TabCampagneOutreach({ isActive }) {
         </button>
       </div>
 
-      {/* SMTP Status Banner */}
+      {/* Email Status */}
       {smtpStatus && !smtpChecking && (
-        <div className={`px-4 py-3 rounded-lg text-sm flex items-center gap-2 ${
-          smtpStatus.configured && smtpStatus.verified
-            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-            : smtpStatus.configured
-              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-              : 'bg-slate-50 text-slate-500 border border-slate-200'
-        }`}>
-          {smtpStatus.configured && smtpStatus.verified ? (
-            <>
-              <CheckCircle className="w-4 h-4" />
-              <span>Brevo connesso: <strong>{smtpStatus.smtp_user}</strong> — Puoi inviare email direttamente dalla dashboard</span>
-            </>
-          ) : smtpStatus.configured ? (
-            <>
-              <AlertCircle className="w-4 h-4" />
-              <span>Brevo configurato ma non verificato: {smtpStatus.message}</span>
-            </>
-          ) : (
-            <>
-              <Mail className="w-4 h-4" />
-              <span>Per inviare email dalla dashboard, configura BREVO_API_KEY su Vercel</span>
-            </>
-          )}
-        </div>
+        smtpStatus.configured && smtpStatus.verified ? (
+          <div className="px-3 py-2 rounded-lg text-xs flex items-center gap-2 bg-emerald-50 text-emerald-600 border border-emerald-200">
+            <CheckCircle className="w-3.5 h-3.5" />
+            Brevo connesso — pronto per l'invio
+          </div>
+        ) : !smtpStatus.configured ? (
+          <div className="px-3 py-2 rounded-lg text-xs flex items-center gap-2 bg-amber-50 text-amber-600 border border-amber-200">
+            <AlertCircle className="w-3.5 h-3.5" />
+            Configura BREVO_API_KEY su Vercel per inviare email
+          </div>
+        ) : null
       )}
 
       {/* Create Form */}
@@ -633,31 +619,28 @@ function TabCampagneOutreach({ isActive }) {
             </div>
           )}
 
-          {/* Follow-up buttons (Step 2, 3, 4) */}
-          {!sending && sentCount > 0 && smtpStatus?.configured && (
-            <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <p className="text-xs text-slate-500 mb-2 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
-                Follow-up: invia gli step successivi ai lead che hanno ricevuto lo step precedente
-              </p>
-              <div className="flex items-center gap-2">
-                {[2, 3, 4].map(step => {
-                  const prevStep = `step${step - 1}_sent`;
-                  const count = campaignLeads.filter(l => l.email_send_status === prevStep && l[`email_body_${step}`]).length;
-                  return (
+          {/* Follow-up button (prossimo step disponibile) */}
+          {!sending && sentCount > 0 && smtpStatus?.configured && (() => {
+            // Trova il prossimo step disponibile
+            for (let step = 2; step <= 4; step++) {
+              const prevStep = `step${step - 1}_sent`;
+              const count = campaignLeads.filter(l => l.email_send_status === prevStep && l[`email_body_${step}`]).length;
+              if (count > 0) {
+                return (
+                  <div className="mb-4">
                     <button
-                      key={step}
                       onClick={() => handleSendEmails(step)}
-                      disabled={count === 0}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-smooth"
+                      className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-indigo-500 text-white hover:bg-indigo-600 transition-smooth"
                     >
-                      Step {step} ({count})
+                      <Send className="w-4 h-4" />
+                      Prossimo Follow-up ({count} lead)
                     </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+                  </div>
+                );
+              }
+            }
+            return null;
+          })()}
 
           {/* Status message */}
           {exportMsg && (
@@ -670,19 +653,22 @@ function TabCampagneOutreach({ isActive }) {
             </div>
           )}
 
-          {/* Send Log */}
-          {sendLog.length > 0 && (
-            <div className="mb-4 max-h-40 overflow-y-auto bg-slate-900 rounded-lg p-3 text-xs font-mono">
-              {sendLog.map((log, i) => (
-                <div key={i} className={`${
-                  log.type === 'ok' ? 'text-emerald-400' :
-                  log.type === 'err' ? 'text-red-400' :
-                  log.type === 'warn' ? 'text-amber-400' :
-                  'text-slate-400'
-                }`}>
-                  {log.msg}
+          {/* Send Log (riassunto semplice) */}
+          {sendLog.length > 0 && !sending && (
+            <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600">
+              <div className="flex items-center gap-3">
+                <span className="text-emerald-600 font-medium">{sendLog.filter(l => l.type === 'ok').length} inviate</span>
+                {sendLog.filter(l => l.type === 'err').length > 0 && (
+                  <span className="text-red-600 font-medium">{sendLog.filter(l => l.type === 'err').length} errori</span>
+                )}
+              </div>
+              {sendLog.filter(l => l.type === 'err').length > 0 && (
+                <div className="mt-2 text-red-500">
+                  {sendLog.filter(l => l.type === 'err').slice(0, 3).map((log, i) => (
+                    <div key={i}>{log.msg}</div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
 

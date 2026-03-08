@@ -143,8 +143,37 @@ function extractUrl(raw) {
   return null;
 }
 
+// Mappa query localizzate per paese
+const LOCALIZED_QUERIES = {
+  IT: [
+    '{cat} brand emergente italia shop online',
+    'marchio moda italiano ecommerce indipendente',
+    'piccolo brand {cat} italiano negozio online'
+  ],
+  ES: [
+    'marca {cat} emergente espana tienda online',
+    'marca moda espanola ecommerce independiente',
+    'pequena marca {cat} espanola tienda online'
+  ],
+  FR: [
+    'marque {cat} emergente france boutique en ligne',
+    'marque mode francaise ecommerce independante',
+    'petite marque {cat} francaise boutique en ligne'
+  ],
+  DE: [
+    '{cat} marke aufstrebend deutschland online shop',
+    'deutsche modemarke ecommerce unabhaengig',
+    'kleine {cat} marke deutschland online shop'
+  ]
+};
+
+const SEARCH_LANG_MAP = {
+  IT: 'it', ES: 'es', FR: 'fr', DE: 'de', UK: 'en', US: 'en',
+  PT: 'pt', NL: 'nl'
+};
+
 // --- Brave Search API ---
-async function searchBrave(searchQuery, urls, countryCode) {
+async function searchBrave(searchQuery, urls, countryCode, searchLang = 'en') {
   try {
     if (!BRAVE_API_KEY) {
       console.warn('[Discovery] Brave API: chiave mancante (BRAVE_SEARCH_API_KEY)');
@@ -153,8 +182,8 @@ async function searchBrave(searchQuery, urls, countryCode) {
 
     const params = new URLSearchParams({
       q: searchQuery,
-      count: '20',
-      search_lang: 'en',
+      count: '30',
+      search_lang: searchLang,
       text_decorations: 'false'
     });
 
@@ -206,23 +235,29 @@ async function searchGoogle(query, country, category, limit) {
   const catKey = (category || 'fashion').toLowerCase();
   const urls = new Set();
 
-  // Query mirate per PMI fashion
-  const queries = [
+  // Query inglesi (funzionano per tutti i paesi)
+  const enQueries = [
     `${catKey} brand ${countryLabel} online shop`,
     `small ${catKey} brand ${countryLabel} ecommerce store`,
     `independent ${catKey} ${countryLabel} online boutique -luxury -outlet`
   ];
+
+  // Query localizzate (nella lingua del paese)
+  const localQueries = (LOCALIZED_QUERIES[country] || []).map(q => q.replace(/\{cat\}/g, catKey));
+  const allQueries = [...enQueries, ...localQueries];
+  const searchLang = SEARCH_LANG_MAP[country] || 'en';
 
   if (!BRAVE_API_KEY) {
     console.warn('[Discovery] BRAVE_SEARCH_API_KEY non configurata — web search disabilitato');
     return { leads, warning: 'Brave Search API key non configurata. Aggiungi BRAVE_SEARCH_API_KEY nelle variabili ambiente.' };
   }
 
-  for (const searchQuery of queries) {
-    if (urls.size >= limit) break;
-    await searchBrave(searchQuery, urls, country);
+  for (let qi = 0; qi < allQueries.length; qi++) {
+    if (urls.size >= limit * 2) break; // Cerchiamo il doppio per compensare filtri
+    const lang = qi < enQueries.length ? 'en' : searchLang;
+    await searchBrave(allQueries[qi], urls, country, lang);
     // Brave API rate limit: 1 req/sec sul piano free
-    if (urls.size < limit) await new Promise(r => setTimeout(r, 1100));
+    if (qi < allQueries.length - 1) await new Promise(r => setTimeout(r, 1100));
   }
 
   console.log(`[Discovery] Brave web search totale: ${urls.size} URL unici`);
@@ -240,6 +275,58 @@ async function searchGoogle(query, country, category, limit) {
   }
 
   return { leads, warning: urls.size === 0 ? 'Nessun risultato dalla ricerca web' : null };
+}
+
+// ============================================================
+// EMAIL EXTRACTION HELPERS
+// ============================================================
+
+const EMAIL_BLOCKLIST = /noreply|no-reply|unsubscribe|webmaster|support@|admin@|info@gmail|example\.com|sentry\.|wixpress|squarespace|shopify/i;
+
+/**
+ * Estrai email da testo grezzo. Gestisce anche email offuscate.
+ */
+function extractEmailFromText(text) {
+  if (!text) return null;
+
+  // 1. Email standard
+  const emailMatches = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
+  for (const found of emailMatches) {
+    if (!EMAIL_BLOCKLIST.test(found)) return found;
+  }
+
+  // 2. Email offuscate: "info [at] dominio [dot] it", "info(at)dominio(dot)it"
+  const obfuscated = text.match(/[a-zA-Z0-9._%+-]+\s*[\[\(]\s*(?:at|chiocciola)\s*[\]\)]\s*[a-zA-Z0-9.-]+\s*[\[\(]\s*(?:dot|punto)\s*[\]\)]\s*[a-zA-Z]{2,}/gi) || [];
+  for (const found of obfuscated) {
+    const cleaned = found
+      .replace(/\s*[\[\(]\s*(?:at|chiocciola)\s*[\]\)]\s*/gi, '@')
+      .replace(/\s*[\[\(]\s*(?:dot|punto)\s*[\]\)]\s*/gi, '.')
+      .trim();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned) && !EMAIL_BLOCKLIST.test(cleaned)) {
+      return cleaned;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Estrai email da HTML (cerca mailto: + testo)
+ */
+function extractEmailFromHtml(html) {
+  if (!html) return null;
+
+  // 1. mailto: link
+  const mailtoMatch = html.match(/mailto:([^\s"'?]+)/);
+  if (mailtoMatch) {
+    const email = mailtoMatch[1].trim();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !EMAIL_BLOCKLIST.test(email)) {
+      return email;
+    }
+  }
+
+  // 2. Cerca email nel testo grezzo
+  return extractEmailFromText(html);
 }
 
 // ============================================================
@@ -361,55 +448,42 @@ async function enrichLead(lead, { quick = false } = {}) {
       // 2. Cerca nel body text della homepage
       if (!lead.contact_email) {
         const bodyText = $('body').text();
-        const emailMatches = bodyText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
-        for (const found of emailMatches) {
-          if (!/noreply|no-reply|support|admin|webmaster|info@gmail|example\.com/i.test(found)) {
-            lead.contact_email = found;
-            break;
-          }
-        }
+        lead.contact_email = extractEmailFromText(bodyText);
       }
 
-      // 3. Prova pagine contatti
-      // Quick mode (batch grandi): solo 1 pagina (/contatti), timeout 2s
-      // Normal mode: tutte e 4, timeout 3s
+      // 3. Prova pagine contatti — fetch parallelo per risparmiare tempo
       if (!lead.contact_email) {
-        const contactPaths = quick ? ['/contatti', '/contact'] : ['/contatti', '/contact', '/contacts', '/about'];
-        const contactTimeout = quick ? 2000 : 3000;
+        const contactPaths = quick
+          ? ['/contatti', '/contact', '/chi-siamo', '/about']
+          : ['/contatti', '/contact', '/contacts', '/about', '/chi-siamo', '/about-us', '/contacto', '/kontakt'];
+        const contactTimeout = quick ? 2500 : 3000;
 
-        for (const contactPath of contactPaths) {
-          try {
+        // Fetch parallelo (tutte le pagine contemporaneamente)
+        const contactResults = await Promise.allSettled(
+          contactPaths.map(async (contactPath) => {
             const cUrl = new URL(contactPath, url).href;
             const cController = new AbortController();
             const cTimeout = setTimeout(() => cController.abort(), contactTimeout);
-            const cRes = await fetch(cUrl, {
-              headers: { 'User-Agent': USER_AGENT },
-              redirect: 'follow',
-              signal: cController.signal
-            });
-            clearTimeout(cTimeout);
-            if (cRes.ok) {
-              const cHtml = await cRes.text();
-              // Cerca mailto: nel HTML grezzo
-              const mailtoMatch = cHtml.match(/mailto:([^\s"'?]+)/);
-              if (mailtoMatch) {
-                const email = mailtoMatch[1].trim();
-                if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !/noreply|unsubscribe/i.test(email)) {
-                  lead.contact_email = email;
-                  break;
-                }
-              }
-              // Cerca email nel testo
-              const textEmails = cHtml.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
-              for (const found of textEmails) {
-                if (!/noreply|no-reply|unsubscribe|webmaster|example\.com/i.test(found)) {
-                  lead.contact_email = found;
-                  break;
-                }
-              }
-              if (lead.contact_email) break;
+            try {
+              const cRes = await fetch(cUrl, {
+                headers: { 'User-Agent': USER_AGENT },
+                redirect: 'follow',
+                signal: cController.signal
+              });
+              clearTimeout(cTimeout);
+              if (cRes.ok) return await cRes.text();
+            } catch {
+              clearTimeout(cTimeout);
             }
-          } catch { /* skip — timeout o errore pagina contatti */ }
+            return null;
+          })
+        );
+
+        for (const result of contactResults) {
+          if (lead.contact_email) break;
+          if (result.status !== 'fulfilled' || !result.value) continue;
+          const cHtml = result.value;
+          lead.contact_email = extractEmailFromHtml(cHtml);
         }
       }
 
