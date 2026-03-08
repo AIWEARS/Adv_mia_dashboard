@@ -210,14 +210,17 @@ function TabLeadPipeline({ isActive }) {
       progress: 0, total: 100, phase: 'searching'
     });
 
-    // Timer per avanzare le fasi visive ogni ~8s
+    // Timer adattivo: batch grandi impiegano piu' tempo
+    const requestedLimit = parseInt(discoverForm.limit) || 25;
+    const phaseInterval = requestedLimit > 30 ? 12000 : 8000;
+
     const progressTimer = setInterval(() => {
       phaseIdx = Math.min(phaseIdx + 1, phases.length - 1);
       const p = phases[phaseIdx];
       setActiveJob(prev => prev?.status === 'processing' ? {
         ...prev, progress: p.pct, total: 100, phase: p.phase
       } : prev);
-    }, 8000);
+    }, phaseInterval);
 
     try {
       const result = await discoverOutreachLeads(discoverForm);

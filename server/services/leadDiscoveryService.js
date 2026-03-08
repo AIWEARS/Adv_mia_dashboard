@@ -250,14 +250,15 @@ async function searchGoogle(query, country, category, limit) {
 // WEBSITE ENRICHMENT (scraping con cheerio)
 // ============================================================
 
-async function enrichLead(lead) {
+async function enrichLead(lead, { quick = false } = {}) {
   if (!lead.website) return lead;
 
   const url = lead.website.startsWith('http') ? lead.website : `https://${lead.website}`;
+  const FETCH_TIMEOUT = quick ? 3000 : 5000;
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
     const response = await fetch(url, {
       headers: { 'User-Agent': USER_AGENT },
@@ -373,8 +374,8 @@ async function enrichLead(lead) {
         }
       }
 
-      // 3. Prova pagina /contatti o /contact (scraping leggero)
-      if (!lead.contact_email) {
+      // 3. Prova pagina /contatti o /contact (skip in modalita' quick per batch grandi)
+      if (!lead.contact_email && !quick) {
         for (const contactPath of ['/contatti', '/contact', '/contacts', '/about']) {
           try {
             const cUrl = new URL(contactPath, url).href;
@@ -568,15 +569,26 @@ export async function discoverLeads(params) {
   const found = allLeads.length;
   console.log(`[Discovery] Trovati ${found} lead unici dopo deduplica`);
 
-  // Fase 2: Enrichment (parallelizzato x3, hard timeout 8s per sito)
+  // Fase 2: Enrichment — adattivo per batch grandi (max 60s totali su Vercel)
+  // Batch piccoli (<=30): 3 paralleli, 8s timeout, scraping contatti completo
+  // Batch grandi (>30): 6 paralleli, 4s timeout, solo homepage (no /contatti)
+  // Oltre 60 lead: arricchisce solo i primi 60, il resto viene aggiunto con dati base
+  const isLargeBatch = allLeads.length > 30;
+  const PARALLEL = isLargeBatch ? 6 : 3;
+  const ENRICH_TIMEOUT = isLargeBatch ? 4000 : 8000;
+  const MAX_ENRICH = 60;
+
+  const leadsToEnrich = allLeads.slice(0, MAX_ENRICH);
+  const leadsBasic = allLeads.slice(MAX_ENRICH); // Aggiunti senza enrichment
+
   let enriched = 0;
-  const PARALLEL = 3;
-  const ENRICH_TIMEOUT = 8000;
-  for (let i = 0; i < allLeads.length; i += PARALLEL) {
-    const batch = allLeads.slice(i, i + PARALLEL);
+  console.log(`[Discovery] Enrichment: ${leadsToEnrich.length} lead da arricchire (parallel=${PARALLEL}, timeout=${ENRICH_TIMEOUT}ms, quick=${isLargeBatch}), ${leadsBasic.length} con dati base`);
+
+  for (let i = 0; i < leadsToEnrich.length; i += PARALLEL) {
+    const batch = leadsToEnrich.slice(i, i + PARALLEL);
     await Promise.all(batch.map(lead =>
       Promise.race([
-        enrichLead(lead),
+        enrichLead(lead, { quick: isLargeBatch }),
         new Promise(resolve => setTimeout(() => {
           console.warn(`[Discovery] Hard timeout for ${lead.website}`);
           lead.enrichment_data = { ...lead.enrichment_data, error: 'timeout' };
@@ -588,13 +600,22 @@ export async function discoverLeads(params) {
       })
     ));
     enriched += batch.length;
-    if (i + PARALLEL < allLeads.length) {
-      await new Promise(r => setTimeout(r, 200));
+    if (i + PARALLEL < leadsToEnrich.length) {
+      await new Promise(r => setTimeout(r, 100));
     }
   }
 
-  // Fase 3: Pre-filtering AI
-  const FILTER_BATCH = 10;
+  // Lead oltre il cap: aggiungi con dati base (status 'new' — non arricchiti)
+  for (const lead of leadsBasic) {
+    lead.status = 'new';
+    enriched++;
+  }
+
+  // Merge tutti i lead per il filtraggio AI
+  allLeads = [...leadsToEnrich, ...leadsBasic];
+
+  // Fase 3: Pre-filtering AI (batch piu' grandi per velocizzare)
+  const FILTER_BATCH = isLargeBatch ? 20 : 10;
   let filteredLeads = [];
 
   for (let i = 0; i < allLeads.length; i += FILTER_BATCH) {
