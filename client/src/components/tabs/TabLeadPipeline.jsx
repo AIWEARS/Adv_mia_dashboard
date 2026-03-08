@@ -53,7 +53,7 @@ function TabLeadPipeline({ isActive }) {
     country: 'IT',
     category: 'fashion',
     limit: 25,
-    sources: ['google']
+    sources: ['google', 'apollo']
   });
   const [selectedLead, setSelectedLead] = useState(null);
   const [activeJob, setActiveJob] = useState(null);

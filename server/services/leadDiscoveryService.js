@@ -235,16 +235,17 @@ async function searchGoogle(query, country, category, limit) {
   const catKey = (category || 'fashion').toLowerCase();
   const urls = new Set();
 
-  // Query inglesi (funzionano per tutti i paesi)
-  const enQueries = [
-    `${catKey} brand ${countryLabel} online shop`,
-    `small ${catKey} brand ${countryLabel} ecommerce store`,
-    `independent ${catKey} ${countryLabel} online boutique -luxury -outlet`
-  ];
-
-  // Query localizzate (nella lingua del paese)
+  // Query localizzate (nella lingua del paese) — no query inglesi, focus locale
   const localQueries = (LOCALIZED_QUERIES[country] || []).map(q => q.replace(/\{cat\}/g, catKey));
-  const allQueries = [...enQueries, ...localQueries];
+
+  // Fallback: se non ci sono query localizzate per il paese, usa inglese
+  const allQueries = localQueries.length > 0
+    ? localQueries
+    : [
+        `${catKey} brand ${countryLabel} online shop`,
+        `small ${catKey} brand ${countryLabel} ecommerce store`,
+        `independent ${catKey} ${countryLabel} online boutique -luxury -outlet`
+      ];
   const searchLang = SEARCH_LANG_MAP[country] || 'en';
 
   if (!BRAVE_API_KEY) {
@@ -254,8 +255,7 @@ async function searchGoogle(query, country, category, limit) {
 
   for (let qi = 0; qi < allQueries.length; qi++) {
     if (urls.size >= limit * 2) break; // Cerchiamo il doppio per compensare filtri
-    const lang = qi < enQueries.length ? 'en' : searchLang;
-    await searchBrave(allQueries[qi], urls, country, lang);
+    await searchBrave(allQueries[qi], urls, country, searchLang);
     // Brave API rate limit: 1 req/sec sul piano free
     if (qi < allQueries.length - 1) await new Promise(r => setTimeout(r, 1100));
   }
