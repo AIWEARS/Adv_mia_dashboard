@@ -12,7 +12,8 @@ import EmptyState from '../ui/EmptyState';
 import {
   getOutreachStats, getOutreachLeads, importOutreachLeadsCsv,
   deleteOutreachLeads, qualifyOutreachLeads, generateOutreachEmails,
-  getOutreachJobStatus, updateOutreachLead, discoverOutreachLeads
+  getOutreachJobStatus, updateOutreachLead, discoverOutreachLeads,
+  findOutreachEmails
 } from '../../utils/api';
 
 const STATUS_LABELS = {
@@ -270,6 +271,7 @@ function TabLeadPipeline({ isActive }) {
       };
       return labels[phase] || 'Ricerca lead in corso...';
     }
+    if (job.type === 'find-emails') return `Ricerca email Apollo... ${job.progress || 0}/${job.total || '?'}`;
     if (job.type === 'qualify') return `Qualificazione AI... ${job.progress || 0}/${job.total || '?'}`;
     return `Generazione email... ${job.progress || 0}/${job.total || '?'}`;
   };
@@ -459,6 +461,84 @@ function TabLeadPipeline({ isActive }) {
     }
   };
 
+  const handleFindEmails = async () => {
+    const idsToSearch = selectedIds.length > 0 ? selectedIds : leads.map(l => l.id);
+    if (idsToSearch.length === 0) return;
+
+    // Filtra solo lead senza email reale
+    const idsNoEmail = idsToSearch.filter(id => {
+      const cached = allLeadsCache.current.find(l => l.id === id);
+      const inPage = leads.find(l => l.id === id);
+      const lead = cached || inPage;
+      if (!lead) return false;
+      return !lead.contact_email || lead.enrichment_data?.email_source === 'generated';
+    });
+
+    if (idsNoEmail.length === 0) {
+      setActiveJob({ type: 'find-emails', status: 'completed', progress: 100, total: 100,
+        results: { found: 0 } });
+      setTimeout(() => setActiveJob(null), 3000);
+      return;
+    }
+
+    // Batching: max 10 per chiamata
+    const BATCH_SIZE = 10;
+    const batches = [];
+    for (let i = 0; i < idsNoEmail.length; i += BATCH_SIZE) {
+      batches.push(idsNoEmail.slice(i, i + BATCH_SIZE));
+    }
+
+    const total = idsNoEmail.length;
+    let processed = 0;
+    let totalFound = 0;
+
+    setActiveJob({ type: 'find-emails', status: 'processing', progress: 0, total, phase: 'searching' });
+
+    try {
+      for (const batchIds of batches) {
+        const cachedLeads = allLeadsCache.current.filter(l => batchIds.includes(l.id));
+        const pageLeads = leads.filter(l => batchIds.includes(l.id));
+
+        const result = await findOutreachEmails({
+          leadIds: batchIds,
+          leads: cachedLeads.length > 0 ? cachedLeads : pageLeads
+        });
+
+        // Aggiorna cache locale
+        if (result.leads?.length > 0) {
+          for (const updated of result.leads) {
+            const cached = allLeadsCache.current.find(l => l.id === updated.id);
+            if (cached) {
+              cached.contact_email = updated.contact_email;
+              cached.contact_name = updated.contact_name || cached.contact_name;
+              cached.contact_title = updated.contact_title || cached.contact_title;
+              cached.enrichment_data = { ...cached.enrichment_data, email_source: 'apollo_people' };
+            }
+          }
+          try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
+        }
+
+        totalFound += result.found || 0;
+        processed += batchIds.length;
+        setActiveJob(prev => prev?.status === 'processing' ? {
+          ...prev, progress: processed, total, phase: `searching (${processed}/${total})`
+        } : prev);
+      }
+
+      setActiveJob({
+        type: 'find-emails', status: 'completed', progress: total, total,
+        results: { found: totalFound, total }
+      });
+      loadLeads();
+      loadStats();
+      setTimeout(() => setActiveJob(null), 5000);
+    } catch (err) {
+      console.error('Find emails error:', err);
+      setActiveJob({ type: 'find-emails', status: 'failed',
+        error: `${err.message} (${processed}/${total} cercati)` });
+    }
+  };
+
   const toggleSelect = (id) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
@@ -517,9 +597,11 @@ function TabLeadPipeline({ isActive }) {
               ? activeJob.results?.added > 0
                 ? `Ricerca completata! ${activeJob.results.added} lead aggiunti${activeJob.results?.filtered_out ? `, ${activeJob.results.filtered_out} scartati dall'AI` : ''}.`
                 : `Ricerca completata ma nessun lead trovato.`
-              : activeJob.type === 'qualify'
-                ? `Qualificazione completata! ${activeJob.results?.length || 0} lead qualificati con score ICP.`
-                : `Email generate per ${activeJob.results?.generated || activeJob.results?.leads?.length || 0} lead!${activeJob.campaignInfo || ' Vai a Campagne Outreach per esportare.'}`
+              : activeJob.type === 'find-emails'
+                ? `Ricerca email completata! ${activeJob.results?.found || 0} email trovate su ${activeJob.results?.total || 0} lead cercati.`
+                : activeJob.type === 'qualify'
+                  ? `Qualificazione completata! ${activeJob.results?.length || 0} lead qualificati con score ICP.`
+                  : `Email generate per ${activeJob.results?.generated || activeJob.results?.leads?.length || 0} lead!${activeJob.campaignInfo || ' Vai a Campagne Outreach per esportare.'}`
             }
           </div>
           {activeJob.type === 'discover' && activeJob.results?.warnings?.length > 0 && (
@@ -597,6 +679,15 @@ function TabLeadPipeline({ isActive }) {
             {selectedIds.length > 0 ? (
               <>
                 <button
+                  onClick={handleFindEmails}
+                  disabled={!!activeJob?.status && activeJob.status === 'processing'}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-smooth disabled:opacity-50"
+                  title="Cerca email con Apollo per i lead selezionati"
+                >
+                  <Mail className="w-4 h-4" />
+                  Trova Email
+                </button>
+                <button
                   onClick={() => {
                     // Smart "Avanti": controlla lo stato dei lead selezionati
                     const cachedSelected = allLeadsCache.current.filter(l => selectedIds.includes(l.id));
@@ -604,14 +695,12 @@ function TabLeadPipeline({ isActive }) {
                     const allSelected = cachedSelected.length > 0 ? cachedSelected : pageSelected;
                     const needsQualify = allSelected.some(l => !l.icp_score && l.icp_score !== 0);
                     const needsEmail = allSelected.some(l => l.icp_score && !l.email_body_1);
-                    // Priorità: prima qualifica, poi genera email
                     if (needsQualify) {
                       handleQualify();
                     } else if (needsEmail) {
                       handleGenerateEmails();
                     } else {
-                      // Tutti già pronti
-                      handleGenerateEmails(); // mostrerà messaggio "già pronti"
+                      handleGenerateEmails();
                     }
                   }}
                   disabled={!!activeJob?.status && activeJob.status === 'processing'}

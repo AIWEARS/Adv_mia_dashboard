@@ -18,7 +18,7 @@ import {
   isOutreachGeminiAvailable, qualifyLeadBatch,
   generateOutreachEmail, generateEmailSubjects
 } from '../services/outreachGeminiService.js';
-import { discoverLeads } from '../services/leadDiscoveryService.js';
+import { discoverLeads, findEmailsViaApollo } from '../services/leadDiscoveryService.js';
 import { isEmailConfigured, verifySmtp, sendBatch } from '../services/emailSendService.js';
 
 // waitUntil per mantenere vivi i job in background su Vercel serverless
@@ -276,6 +276,62 @@ router.post('/discover', async (req, res) => {
     });
   } catch (err) {
     console.error('[Outreach] Discover error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// FIND EMAILS (Apollo People Search — per lead senza email)
+// ============================================================
+
+router.post('/find-emails', async (req, res) => {
+  try {
+    const { leadIds, leads: clientLeads } = req.body;
+
+    if (!leadIds || !Array.isArray(leadIds) || leadIds.length === 0) {
+      return res.status(400).json({ error: 'Fornisci un array di leadIds' });
+    }
+
+    // Recupera lead dallo store, fallback dal client
+    let leadsToSearch = leadIds.map(id => getLead(id)).filter(Boolean);
+    if (leadsToSearch.length === 0 && Array.isArray(clientLeads) && clientLeads.length > 0) {
+      addLeads(clientLeads);
+      leadsToSearch = leadIds.map(id => getLead(id)).filter(Boolean);
+    }
+
+    // Filtra solo quelli senza email (o con email generata info@)
+    const leadsNoEmail = leadsToSearch.filter(l =>
+      !l.contact_email || l.enrichment_data?.email_source === 'generated'
+    );
+
+    if (leadsNoEmail.length === 0) {
+      return res.json({ status: 'completed', found: 0, total: 0, message: 'Tutti i lead hanno gia\' un\'email.' });
+    }
+
+    const result = await findEmailsViaApollo(leadsNoEmail);
+
+    // Salva le email trovate nello store
+    for (const lead of leadsNoEmail) {
+      if (lead.contact_email && lead.enrichment_data?.email_source === 'apollo_people') {
+        updateLead(lead.id, {
+          contact_email: lead.contact_email,
+          contact_name: lead.contact_name,
+          contact_title: lead.contact_title,
+          enrichment_data: lead.enrichment_data
+        });
+      }
+    }
+    saveStore();
+
+    res.json({
+      status: 'completed',
+      found: result.found,
+      total: result.total,
+      leads: leadsNoEmail.filter(l => l.enrichment_data?.email_source === 'apollo_people')
+        .map(l => ({ id: l.id, contact_email: l.contact_email, contact_name: l.contact_name, contact_title: l.contact_title }))
+    });
+  } catch (err) {
+    console.error('[Outreach] Find emails error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

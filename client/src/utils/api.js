@@ -244,6 +244,13 @@ export async function discoverOutreachLeads(params) {
   });
 }
 
+export async function findOutreachEmails(payload) {
+  return fetchApi('/outreach/find-emails', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getOutreachJobStatus(jobId) {
   return fetchApi(`/outreach/jobs/${jobId}`);
 }
