@@ -280,8 +280,8 @@ function TabCampagneOutreach({ isActive }) {
     let totalSent = 0;
     let totalFailed = 0;
 
-    // Invia in batch da 3 con 30s pausa tra batch
-    const BATCH_SIZE = 3;
+    // Invia in batch da 5 con 20s pausa tra batch (Brevo API e' veloce)
+    const BATCH_SIZE = 5;
     for (let i = 0; i < leadsToSend.length; i += BATCH_SIZE) {
       // Check abort
       if (sendAbortRef.current) {
@@ -370,10 +370,10 @@ function TabCampagneOutreach({ isActive }) {
         setSendProgress(prev => ({ ...prev, failed: totalFailed }));
       }
 
-      // Pausa 30s tra batch (non dopo l'ultimo)
+      // Pausa 20s tra batch (non dopo l'ultimo)
       if (i + BATCH_SIZE < leadsToSend.length && !sendAbortRef.current) {
-        setSendLog(prev => [...prev, { type: 'info', msg: 'Attesa 30s prima del prossimo batch...' }]);
-        for (let w = 0; w < 30; w++) {
+        setSendLog(prev => [...prev, { type: 'info', msg: 'Attesa 20s prima del prossimo batch...' }]);
+        for (let w = 0; w < 20; w++) {
           if (sendAbortRef.current) break;
           while (sendPausedRef.current && !sendAbortRef.current) {
             await new Promise(r => setTimeout(r, 500));
@@ -446,17 +446,17 @@ function TabCampagneOutreach({ isActive }) {
           {smtpStatus.configured && smtpStatus.verified ? (
             <>
               <CheckCircle className="w-4 h-4" />
-              <span>SMTP connesso: <strong>{smtpStatus.smtp_user}</strong> — Puoi inviare email direttamente dalla dashboard</span>
+              <span>Brevo connesso: <strong>{smtpStatus.smtp_user}</strong> — Puoi inviare email direttamente dalla dashboard</span>
             </>
           ) : smtpStatus.configured ? (
             <>
               <AlertCircle className="w-4 h-4" />
-              <span>SMTP configurato ma non verificato: {smtpStatus.message}</span>
+              <span>Brevo configurato ma non verificato: {smtpStatus.message}</span>
             </>
           ) : (
             <>
               <Mail className="w-4 h-4" />
-              <span>Per inviare email dalla dashboard, configura SMTP_USER e SMTP_PASS su Vercel</span>
+              <span>Per inviare email dalla dashboard, configura BREVO_API_KEY su Vercel</span>
             </>
           )}
         </div>

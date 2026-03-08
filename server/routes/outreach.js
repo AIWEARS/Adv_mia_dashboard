@@ -434,24 +434,24 @@ router.post('/generate-emails', async (req, res) => {
 });
 
 // ============================================================
-// DIRECT EMAIL SENDING (SMTP)
+// DIRECT EMAIL SENDING (Brevo API)
 // ============================================================
 
-// Verifica configurazione SMTP
+// Verifica configurazione Brevo
 router.get('/email-config', async (req, res) => {
   try {
     const configured = isEmailConfigured();
     if (!configured) {
       return res.json({
         configured: false,
-        message: 'SMTP non configurato. Aggiungi SMTP_USER e SMTP_PASS alle variabili d\'ambiente.'
+        message: 'Brevo non configurato. Aggiungi BREVO_API_KEY alle variabili d\'ambiente.'
       });
     }
     const verification = await verifySmtp();
     res.json({
       configured: true,
-      smtp_user: process.env.SMTP_USER,
-      smtp_host: process.env.SMTP_HOST || 'smtp.office365.com',
+      provider: 'brevo',
+      smtp_user: process.env.EMAIL_FROM || 'info@itsmia.it',
       verified: verification.ok,
       message: verification.message
     });
@@ -460,13 +460,13 @@ router.get('/email-config', async (req, res) => {
   }
 });
 
-// Invia batch di email (max 5 per chiamata)
-// Frontend chiama ripetutamente con batch da 5, con delay di 30s tra le chiamate
+// Invia batch di email (max 8 per chiamata via Brevo API)
+// Frontend chiama ripetutamente con batch, con delay tra le chiamate
 router.post('/send-emails', async (req, res) => {
   try {
     if (!isEmailConfigured()) {
       return res.status(503).json({
-        error: 'SMTP non configurato. Aggiungi SMTP_USER e SMTP_PASS su Vercel.'
+        error: 'Brevo non configurato. Aggiungi BREVO_API_KEY su Vercel.'
       });
     }
 
@@ -476,8 +476,8 @@ router.post('/send-emails', async (req, res) => {
       return res.status(400).json({ error: 'Fornisci un array di email da inviare' });
     }
 
-    // Prepara il batch (max 5)
-    const batch = emails.slice(0, 5).map(e => ({
+    // Prepara il batch (max 8 con Brevo)
+    const batch = emails.slice(0, 8).map(e => ({
       to: e.to,
       subject: e.subject,
       body: e.body,

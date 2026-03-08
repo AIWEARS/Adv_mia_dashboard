@@ -1,77 +1,57 @@
 /**
  * EMAIL SEND SERVICE
- * Invio email SMTP diretto via Nodemailer.
- * Configurato per Microsoft 365 (smtp.office365.com).
+ * Invio email via Brevo (ex Sendinblue) HTTP API.
+ * Nessuna dipendenza SMTP — perfetto per Vercel serverless.
  *
  * Env vars richieste:
- *   SMTP_HOST=smtp.office365.com
- *   SMTP_PORT=587
- *   SMTP_USER=info@itsmia.it
- *   SMTP_PASS=<app password>
- *   SMTP_FROM_NAME=Federico - MIA (opzionale)
+ *   BREVO_API_KEY=xkeysib-...
+ *   EMAIL_FROM=info@itsmia.it (opzionale, default)
+ *   EMAIL_FROM_NAME=Federico - MIA (opzionale, default)
  */
 
-import nodemailer from 'nodemailer';
-
 // --- Config ---
-const SMTP_HOST = process.env.SMTP_HOST || 'smtp.office365.com';
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
-const SMTP_USER = process.env.SMTP_USER || '';
-const SMTP_PASS = process.env.SMTP_PASS || '';
-const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME || 'Federico - MIA';
-
-let transporter = null;
+const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'info@itsmia.it';
+const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || 'Federico - MIA';
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 /**
  * Verifica se il servizio email e' configurato
  */
 export function isEmailConfigured() {
-  return !!(SMTP_USER && SMTP_PASS);
+  return !!BREVO_API_KEY;
 }
 
 /**
- * Crea o restituisce il transporter Nodemailer
- */
-function getTransporter() {
-  if (!transporter) {
-    if (!isEmailConfigured()) {
-      throw new Error('SMTP non configurato. Imposta SMTP_USER e SMTP_PASS nelle variabili d\'ambiente.');
-    }
-    transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: false, // STARTTLS
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-      tls: {
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-    });
-  }
-  return transporter;
-}
-
-/**
- * Verifica la connessione SMTP
+ * Verifica la connessione Brevo (chiama GET /account)
  */
 export async function verifySmtp() {
   try {
-    const t = getTransporter();
-    await t.verify();
-    return { ok: true, message: `SMTP connesso: ${SMTP_USER}@${SMTP_HOST}` };
+    if (!BREVO_API_KEY) {
+      return { ok: false, message: 'BREVO_API_KEY non configurata.' };
+    }
+
+    const resp = await fetch('https://api.brevo.com/v3/account', {
+      headers: { 'api-key': BREVO_API_KEY }
+    });
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      return { ok: false, message: `Brevo API errore: ${resp.status} - ${err}` };
+    }
+
+    const data = await resp.json();
+    return {
+      ok: true,
+      message: `Brevo connesso: ${data.email || EMAIL_FROM} — Piano: ${data.plan?.[0]?.type || 'free'}`
+    };
   } catch (err) {
-    return { ok: false, message: `SMTP errore: ${err.message}` };
+    return { ok: false, message: `Brevo errore: ${err.message}` };
   }
 }
 
 /**
- * Invia una singola email
+ * Invia una singola email via Brevo API
  * @param {Object} params
  * @param {string} params.to - Indirizzo destinatario
  * @param {string} params.subject - Oggetto email
@@ -81,9 +61,11 @@ export async function verifySmtp() {
  */
 export async function sendEmail({ to, subject, body, replyTo }) {
   try {
-    const t = getTransporter();
+    if (!BREVO_API_KEY) {
+      throw new Error('BREVO_API_KEY non configurata.');
+    }
 
-    // Converti body in HTML basico (preserva line breaks)
+    // Converti body in HTML basico (preserva line breaks, rendi link cliccabili)
     const htmlBody = body
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -91,21 +73,42 @@ export async function sendEmail({ to, subject, body, replyTo }) {
       .replace(/\n/g, '<br>')
       .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
 
-    const mailOptions = {
-      from: `"${SMTP_FROM_NAME}" <${SMTP_USER}>`,
-      to,
+    const payload = {
+      sender: {
+        name: EMAIL_FROM_NAME,
+        email: EMAIL_FROM
+      },
+      to: [{ email: to }],
       subject,
-      text: body,
-      html: `<div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6;">${htmlBody}</div>`,
+      textContent: body,
+      htmlContent: `<div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6;">${htmlBody}</div>`
     };
 
     if (replyTo) {
-      mailOptions.replyTo = replyTo;
+      payload.replyTo = { email: replyTo };
     }
 
-    const info = await t.sendMail(mailOptions);
-    console.log(`[EmailSend] Inviata a ${to}: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
+    const resp = await fetch(BREVO_API_URL, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'api-key': BREVO_API_KEY
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      const errMsg = errData.message || `HTTP ${resp.status}`;
+      console.error(`[EmailSend] Brevo errore per ${to}:`, errMsg);
+      return { success: false, error: errMsg };
+    }
+
+    const data = await resp.json();
+    const messageId = data.messageId || data.messageIds?.[0] || 'ok';
+    console.log(`[EmailSend] Inviata a ${to}: ${messageId}`);
+    return { success: true, messageId };
   } catch (err) {
     console.error(`[EmailSend] Errore invio a ${to}:`, err.message);
     return { success: false, error: err.message };
@@ -114,15 +117,15 @@ export async function sendEmail({ to, subject, body, replyTo }) {
 
 /**
  * Invia un batch di email con delay tra ognuna (per evitare rate limit).
- * Max 5 email per batch, 3s delay tra ognuna.
+ * Max 5 email per batch, 2s delay tra ognuna.
  * Pensato per restare dentro il timeout di 60s di Vercel.
  *
  * @param {Array} emails - Array di { to, subject, body, leadId }
- * @param {number} [delayMs=3000] - Delay in ms tra ogni email
+ * @param {number} [delayMs=2000] - Delay in ms tra ogni email
  * @returns {Object} { sent, failed, results }
  */
-export async function sendBatch(emails, delayMs = 3000) {
-  const MAX_BATCH = 5;
+export async function sendBatch(emails, delayMs = 2000) {
+  const MAX_BATCH = 8; // Brevo e' piu' veloce di SMTP, possiamo fare batch piu' grandi
   const batch = emails.slice(0, MAX_BATCH);
   const results = [];
   let sent = 0;
@@ -151,14 +154,4 @@ export async function sendBatch(emails, delayMs = 3000) {
   }
 
   return { sent, failed, results, total: batch.length };
-}
-
-/**
- * Resetta il transporter (utile per test o cambio config)
- */
-export function resetTransporter() {
-  if (transporter) {
-    transporter.close();
-    transporter = null;
-  }
 }
