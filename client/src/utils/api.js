@@ -257,4 +257,17 @@ export async function exportOutreachCampaign(campaignId) {
   return response.blob();
 }
 
+// ===== DIRECT EMAIL SENDING =====
+
+export async function checkEmailConfig() {
+  return fetchApi('/outreach/email-config');
+}
+
+export async function sendOutreachEmails(payload) {
+  return fetchApi('/outreach/send-emails', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export default fetchApi;

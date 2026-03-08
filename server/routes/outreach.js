@@ -19,6 +19,7 @@ import {
   generateOutreachEmail, generateEmailSubjects
 } from '../services/outreachGeminiService.js';
 import { discoverLeads } from '../services/leadDiscoveryService.js';
+import { isEmailConfigured, verifySmtp, sendBatch } from '../services/emailSendService.js';
 
 // waitUntil per mantenere vivi i job in background su Vercel serverless
 let waitUntil = (promise) => {}; // no-op in locale
@@ -428,6 +429,93 @@ router.post('/generate-emails', async (req, res) => {
     });
   } catch (err) {
     console.error('[Outreach] Generate emails error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// DIRECT EMAIL SENDING (SMTP)
+// ============================================================
+
+// Verifica configurazione SMTP
+router.get('/email-config', async (req, res) => {
+  try {
+    const configured = isEmailConfigured();
+    if (!configured) {
+      return res.json({
+        configured: false,
+        message: 'SMTP non configurato. Aggiungi SMTP_USER e SMTP_PASS alle variabili d\'ambiente.'
+      });
+    }
+    const verification = await verifySmtp();
+    res.json({
+      configured: true,
+      smtp_user: process.env.SMTP_USER,
+      smtp_host: process.env.SMTP_HOST || 'smtp.office365.com',
+      verified: verification.ok,
+      message: verification.message
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Invia batch di email (max 5 per chiamata)
+// Frontend chiama ripetutamente con batch da 5, con delay di 30s tra le chiamate
+router.post('/send-emails', async (req, res) => {
+  try {
+    if (!isEmailConfigured()) {
+      return res.status(503).json({
+        error: 'SMTP non configurato. Aggiungi SMTP_USER e SMTP_PASS su Vercel.'
+      });
+    }
+
+    const { emails, campaignId, step = 1 } = req.body;
+
+    if (!Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({ error: 'Fornisci un array di email da inviare' });
+    }
+
+    // Prepara il batch (max 5)
+    const batch = emails.slice(0, 5).map(e => ({
+      to: e.to,
+      subject: e.subject,
+      body: e.body,
+      leadId: e.leadId
+    }));
+
+    // Invia con 3s delay tra ogni email
+    const result = await sendBatch(batch, 3000);
+
+    // Aggiorna status lead nello store
+    for (const r of result.results) {
+      if (r.success && r.leadId) {
+        const updateData = {
+          [`email_${step}_sent_at`]: new Date().toISOString(),
+          [`email_${step}_message_id`]: r.messageId,
+          email_send_status: step === 1 ? 'step1_sent' : `step${step}_sent`,
+          status: 'sent'
+        };
+        updateLead(r.leadId, updateData);
+      } else if (!r.success && r.leadId) {
+        updateLead(r.leadId, {
+          email_send_status: 'error',
+          email_send_error: r.error
+        });
+      }
+    }
+
+    if (result.sent > 0) saveStore();
+
+    res.json({
+      status: 'completed',
+      sent: result.sent,
+      failed: result.failed,
+      total: result.total,
+      results: result.results
+    });
+  } catch (err) {
+    console.error('[Outreach] Send emails error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
