@@ -252,7 +252,7 @@ router.delete('/campaigns/:id', (req, res) => {
 });
 
 // ============================================================
-// LEAD DISCOVERY (ricerca automatica)
+// LEAD DISCOVERY (ricerca automatica — sincrona, max 60s su Vercel)
 // ============================================================
 
 router.post('/discover', async (req, res) => {
@@ -264,15 +264,15 @@ router.post('/discover', async (req, res) => {
     }
 
     const limitNum = Math.min(parseInt(limit) || 25, 100);
-    const jobId = createJob('discover', limitNum);
-    res.json({ jobId, status: 'processing', total: limitNum });
 
-    // Processing in background (waitUntil mantiene vivo il job su Vercel)
-    const discoverPromise = discoverLeads(jobId, { query, country, category, limit: limitNum, sources }).catch(err => {
-      console.error('[Outreach] Discovery job failed:', err.message);
-      updateJob(jobId, { status: 'failed', error: err.message });
+    // Esecuzione SINCRONA — tutto il lavoro avviene dentro la request HTTP
+    // maxDuration=60s in vercel.json garantisce tempo sufficiente
+    const results = await discoverLeads({ query, country, category, limit: limitNum, sources });
+
+    res.json({
+      status: 'completed',
+      results
     });
-    waitUntil(discoverPromise);
   } catch (err) {
     console.error('[Outreach] Discover error:', err.message);
     res.status(500).json({ error: err.message });

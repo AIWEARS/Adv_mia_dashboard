@@ -145,9 +145,9 @@ function TabLeadPipeline({ isActive }) {
     }
   }, [isActive, loadStats, loadLeads]);
 
-  // Polling per job attivo
+  // Polling per job attivo (solo qualify/generate-emails, discover è sincrono)
   useEffect(() => {
-    if (!activeJob) return;
+    if (!activeJob || !activeJob.jobId) return;
     pollingRef.current = setInterval(async () => {
       try {
         const job = await getOutreachJobStatus(activeJob.jobId);
@@ -155,15 +155,6 @@ function TabLeadPipeline({ isActive }) {
         if (job.status === 'completed' || job.status === 'failed') {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
-          // Per discover: salva lead in cache locale (workaround Vercel in-memory)
-          if (activeJob.type === 'discover' && job.status === 'completed' && job.results?.leads?.length > 0) {
-            const newLeads = job.results.leads;
-            const existing = allLeadsCache.current;
-            const existingWs = new Set(existing.map(l => (l.website || '').toLowerCase()));
-            const unique = newLeads.filter(l => !existingWs.has((l.website || '').toLowerCase()));
-            allLeadsCache.current = [...existing, ...unique];
-            try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
-          }
           loadLeads();
           loadStats();
           if (job.status === 'completed') {
@@ -197,15 +188,62 @@ function TabLeadPipeline({ isActive }) {
   };
 
   const handleDiscover = async () => {
+    setShowDiscover(false);
+
+    // Simula progresso con fasi animate (la chiamata è sincrona, max 60s)
+    const phases = [
+      { phase: 'searching', label: 'Ricerca lead in corso...', pct: 15 },
+      { phase: 'enriching', label: 'Arricchimento dati...', pct: 50 },
+      { phase: 'filtering', label: 'Filtraggio AI...', pct: 80 },
+      { phase: 'saving', label: 'Salvataggio...', pct: 95 }
+    ];
+    let phaseIdx = 0;
+
+    setActiveJob({
+      type: 'discover', status: 'processing',
+      progress: 0, total: 100, phase: 'searching'
+    });
+
+    // Timer per avanzare le fasi visive ogni ~8s
+    const progressTimer = setInterval(() => {
+      phaseIdx = Math.min(phaseIdx + 1, phases.length - 1);
+      const p = phases[phaseIdx];
+      setActiveJob(prev => prev?.status === 'processing' ? {
+        ...prev, progress: p.pct, total: 100, phase: p.phase
+      } : prev);
+    }, 8000);
+
     try {
       const result = await discoverOutreachLeads(discoverForm);
+      clearInterval(progressTimer);
+
+      const results = result.results || result;
+
+      // Salva in cache locale
+      if (results.leads?.length > 0) {
+        const existing = allLeadsCache.current;
+        const existingWs = new Set(existing.map(l => (l.website || '').toLowerCase()));
+        const unique = results.leads.filter(l => !existingWs.has((l.website || '').toLowerCase()));
+        allLeadsCache.current = [...existing, ...unique];
+        try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
+      }
+
       setActiveJob({
-        jobId: result.jobId, type: 'discover', status: 'processing',
-        progress: 0, total: result.total, phase: 'searching'
+        type: 'discover', status: 'completed',
+        progress: 100, total: 100, phase: 'done',
+        results
       });
-      setShowDiscover(false);
+
+      loadLeads();
+      loadStats();
+      setTimeout(() => setActiveJob(null), 5000);
     } catch (err) {
+      clearInterval(progressTimer);
       console.error('Discover error:', err);
+      setActiveJob({
+        type: 'discover', status: 'failed',
+        error: err.message || 'Errore durante la ricerca'
+      });
     }
   };
 

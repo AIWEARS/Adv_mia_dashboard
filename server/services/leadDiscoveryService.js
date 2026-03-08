@@ -5,7 +5,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import { addLeads, updateJob, saveStore } from './outreachStore.js';
+import { addLeads, saveStore } from './outreachStore.js';
 import { isOutreachGeminiAvailable } from './outreachGeminiService.js';
 
 const APOLLO_API_KEY = process.env.APOLLO_API_KEY || '';
@@ -444,17 +444,17 @@ Criteri FONDAMENTALI - MIA e' per PICCOLI/MEDI brand, NON per grandi aziende fam
 }
 
 // ============================================================
-// ORCHESTRATORE — DISCOVER LEADS (processata come job)
+// ORCHESTRATORE — DISCOVER LEADS (sincrono, ritorna risultati direttamente)
+// Su Vercel Hobby waitUntil ha solo 15s — usiamo maxDuration 60s sincrono.
 // ============================================================
 
-export async function discoverLeads(jobId, params) {
+export async function discoverLeads(params) {
   const { query = 'fashion brand', country = 'IT', category = 'fashion', limit = 25, sources = ['apollo', 'google'] } = params;
 
   let allLeads = [];
   const warnings = [];
 
   // Fase 1: Ricerca
-  updateJob(jobId, { progress: 0, phase: 'searching' });
   console.log(`[Discovery] Start: query="${query}", country=${country}, category=${category}, limit=${limit}, sources=${sources.join(',')}`);
 
   if (sources.includes('apollo')) {
@@ -471,19 +471,13 @@ export async function discoverLeads(jobId, params) {
     if (googleResult.warning) warnings.push(googleResult.warning);
   }
 
-  // Se nessuna fonte ha trovato nulla, riporta nel job
+  // Se nessuna fonte ha trovato nulla
   if (allLeads.length === 0) {
     console.warn(`[Discovery] Nessun lead trovato. Warnings: ${warnings.join('; ')}`);
-    updateJob(jobId, {
-      status: 'completed',
-      progress: 0,
-      phase: 'done',
-      results: {
-        found: 0, enriched: 0, filtered_out: 0, added: 0, duplicates: 0,
-        warnings
-      }
-    });
-    return;
+    return {
+      found: 0, enriched: 0, filtered_out: 0, added: 0, duplicates: 0,
+      warnings, leads: []
+    };
   }
 
   // Deduplica per website
@@ -497,9 +491,8 @@ export async function discoverLeads(jobId, params) {
 
   const found = allLeads.length;
   console.log(`[Discovery] Trovati ${found} lead unici dopo deduplica`);
-  updateJob(jobId, { total: found, phase: 'enriching' });
 
-  // Fase 2: Enrichment (parallelizzato x3, hard timeout 8s per sito incluso body download)
+  // Fase 2: Enrichment (parallelizzato x3, hard timeout 8s per sito)
   let enriched = 0;
   const PARALLEL = 3;
   const ENRICH_TIMEOUT = 8000;
@@ -519,14 +512,12 @@ export async function discoverLeads(jobId, params) {
       })
     ));
     enriched += batch.length;
-    updateJob(jobId, { progress: enriched, phase: 'enriching' });
     if (i + PARALLEL < allLeads.length) {
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 200));
     }
   }
 
   // Fase 3: Pre-filtering AI
-  updateJob(jobId, { phase: 'filtering' });
   const FILTER_BATCH = 10;
   let filteredLeads = [];
 
@@ -548,20 +539,16 @@ export async function discoverLeads(jobId, params) {
     status: 'enriched'
   })));
 
-  updateJob(jobId, {
-    status: 'completed',
-    progress: found,
-    phase: 'done',
-    results: {
-      found,
-      enriched,
-      filtered_out: filteredOut,
-      added: result.added,
-      duplicates: result.duplicates,
-      warnings,
-      leads: result.leads || []
-    }
-  });
   saveStore();
   console.log(`[Discovery] Completato: ${result.added} lead aggiunti, ${result.duplicates} duplicati, ${filteredOut} scartati`);
+
+  return {
+    found,
+    enriched,
+    filtered_out: filteredOut,
+    added: result.added,
+    duplicates: result.duplicates,
+    warnings,
+    leads: result.leads || []
+  };
 }
