@@ -40,57 +40,69 @@ async function searchApollo(query, country, category, limit) {
   const countryLabel = COUNTRY_LABELS[country] || country;
   const catKey = (category || 'fashion').toLowerCase();
   const categoryKw = CATEGORY_KEYWORDS[catKey] || category;
-  // Splitta keyword in tag singoli per Apollo
   const tags = [...new Set([...catKey.split(/\s+/), ...categoryKw.split(/\s+/)])].filter(t => t.length > 2);
 
+  const PER_PAGE = 25; // Max Apollo
+  const maxPages = Math.min(Math.ceil(limit / PER_PAGE), 4); // Max 4 pagine (100 lead)
+
   try {
-    // Usa /v1/organizations/search (disponibile su piano Free)
-    // NOTA: /v1/mixed_companies/search e /v1/mixed_people/search richiedono piano a pagamento
-    console.log(`[Discovery] Apollo search: tags=${JSON.stringify(tags)}, country="${countryLabel}", limit=${limit}`);
-    const orgResponse = await fetch('https://api.apollo.io/v1/organizations/search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Api-Key': APOLLO_API_KEY  // Apollo richiede API key nell'header
-      },
-      body: JSON.stringify({
-        q_organization_keyword_tags: tags,
-        organization_locations: [countryLabel],
-        organization_num_employees_ranges: ["1,10", "11,20", "21,50", "51,100", "101,200", "201,500"],
-        per_page: Math.min(limit, 25),
-        page: 1
-      })
-    });
+    console.log(`[Discovery] Apollo search: tags=${JSON.stringify(tags)}, country="${countryLabel}", limit=${limit}, pages=${maxPages}`);
 
-    if (!orgResponse.ok) {
-      const errBody = await orgResponse.text().catch(() => '');
-      console.error(`[Discovery] Apollo search failed: HTTP ${orgResponse.status} — ${errBody.substring(0, 300)}`);
-      return { leads: [], warning: `Apollo API errore ${orgResponse.status}` };
-    }
+    for (let page = 1; page <= maxPages && leads.length < limit; page++) {
+      const orgResponse = await fetch('https://api.apollo.io/v1/organizations/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Api-Key': APOLLO_API_KEY
+        },
+        body: JSON.stringify({
+          q_organization_keyword_tags: tags,
+          organization_locations: [countryLabel],
+          organization_num_employees_ranges: ["1,10", "11,20", "21,50", "51,100", "101,200", "201,500"],
+          per_page: PER_PAGE,
+          page
+        })
+      });
 
-    const orgData = await orgResponse.json();
-    const orgs = orgData.organizations || [];
-    console.log(`[Discovery] Apollo: ${orgs.length} organizzazioni trovate (totale: ${orgData.pagination?.total_entries || '?'})`);
+      if (!orgResponse.ok) {
+        const errBody = await orgResponse.text().catch(() => '');
+        console.error(`[Discovery] Apollo page ${page} failed: HTTP ${orgResponse.status} — ${errBody.substring(0, 200)}`);
+        if (page === 1) return { leads: [], warning: `Apollo API errore ${orgResponse.status}` };
+        break; // Continua con i lead gia' trovati
+      }
 
-    for (const org of orgs.slice(0, limit)) {
-      const website = org.website_url || (org.primary_domain ? `https://${org.primary_domain}` : '');
-      const lead = {
-        company: org.name || '',
-        website: website,
-        country: country,
-        source: 'apollo',
-        estimated_employees: org.estimated_num_employees || 0,
-        product_category: category,
-        enrichment_data: {
-          linkedin_url: org.linkedin_url || '',
-          founded_year: org.founded_year,
-          industry: org.industry || '',
-          apollo_id: org.id
+      const orgData = await orgResponse.json();
+      const orgs = orgData.organizations || [];
+      const totalEntries = orgData.pagination?.total_entries || 0;
+      console.log(`[Discovery] Apollo page ${page}: ${orgs.length} orgs (totale disponibile: ${totalEntries})`);
+
+      if (orgs.length === 0) break; // Nessun altro risultato
+
+      for (const org of orgs) {
+        if (leads.length >= limit) break;
+        const website = org.website_url || (org.primary_domain ? `https://${org.primary_domain}` : '');
+        const lead = {
+          company: org.name || '',
+          website: website,
+          country: country,
+          source: 'apollo',
+          estimated_employees: org.estimated_num_employees || 0,
+          product_category: category,
+          enrichment_data: {
+            linkedin_url: org.linkedin_url || '',
+            founded_year: org.founded_year,
+            industry: org.industry || '',
+            apollo_id: org.id
+          }
+        };
+        if (lead.company || lead.website) {
+          leads.push(lead);
         }
-      };
+      }
 
-      if (lead.company || lead.website) {
-        leads.push(lead);
+      // Rate limit tra pagine Apollo
+      if (page < maxPages && leads.length < limit) {
+        await new Promise(r => setTimeout(r, 300));
       }
     }
   } catch (err) {
@@ -98,6 +110,7 @@ async function searchApollo(query, country, category, limit) {
     return { leads, warning: `Apollo errore: ${err.message}` };
   }
 
+  console.log(`[Discovery] Apollo totale: ${leads.length} lead`);
   return { leads, warning: null };
 }
 
@@ -334,14 +347,77 @@ async function enrichLead(lead) {
       }
     });
 
-    // Email di contatto (nel footer o pagina contatti)
-    const bodyText = $('body').text();
-    const emailMatch = bodyText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-    if (emailMatch && !lead.contact_email) {
-      // Filtra email generiche tipo noreply, support
-      const found = emailMatch[0];
-      if (!/noreply|no-reply|support|admin|webmaster|info@gmail/i.test(found)) {
-        lead.contact_email = found;
+    // Email di contatto — cerca in piu' posti
+    if (!lead.contact_email) {
+      // 1. mailto: links (piu' affidabili)
+      $('a[href^="mailto:"]').each((_, el) => {
+        if (lead.contact_email) return;
+        const href = $(el).attr('href') || '';
+        const email = href.replace('mailto:', '').split('?')[0].trim();
+        if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          if (!/noreply|no-reply|unsubscribe|webmaster/i.test(email)) {
+            lead.contact_email = email;
+          }
+        }
+      });
+
+      // 2. Cerca nel body text della homepage
+      if (!lead.contact_email) {
+        const bodyText = $('body').text();
+        const emailMatches = bodyText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
+        for (const found of emailMatches) {
+          if (!/noreply|no-reply|support|admin|webmaster|info@gmail|example\.com/i.test(found)) {
+            lead.contact_email = found;
+            break;
+          }
+        }
+      }
+
+      // 3. Prova pagina /contatti o /contact (scraping leggero)
+      if (!lead.contact_email) {
+        for (const contactPath of ['/contatti', '/contact', '/contacts', '/about']) {
+          try {
+            const cUrl = new URL(contactPath, url).href;
+            const cController = new AbortController();
+            const cTimeout = setTimeout(() => cController.abort(), 3000);
+            const cRes = await fetch(cUrl, {
+              headers: { 'User-Agent': USER_AGENT },
+              redirect: 'follow',
+              signal: cController.signal
+            });
+            clearTimeout(cTimeout);
+            if (cRes.ok) {
+              const cHtml = await cRes.text();
+              // Cerca mailto: nel HTML grezzo
+              const mailtoMatch = cHtml.match(/mailto:([^\s"'?]+)/);
+              if (mailtoMatch) {
+                const email = mailtoMatch[1].trim();
+                if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !/noreply|unsubscribe/i.test(email)) {
+                  lead.contact_email = email;
+                  break;
+                }
+              }
+              // Cerca email nel testo
+              const textEmails = cHtml.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
+              for (const found of textEmails) {
+                if (!/noreply|no-reply|unsubscribe|webmaster|example\.com/i.test(found)) {
+                  lead.contact_email = found;
+                  break;
+                }
+              }
+              if (lead.contact_email) break;
+            }
+          } catch { /* skip — timeout o errore pagina contatti */ }
+        }
+      }
+
+      // 4. Fallback: genera info@dominio
+      if (!lead.contact_email && lead.website) {
+        try {
+          const domain = new URL(url).hostname.replace('www.', '');
+          lead.contact_email = `info@${domain}`;
+          lead.enrichment_data = { ...lead.enrichment_data, email_source: 'generated' };
+        } catch {}
       }
     }
 

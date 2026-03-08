@@ -264,8 +264,8 @@ function TabLeadPipeline({ isActive }) {
       };
       return labels[phase] || 'Ricerca lead in corso...';
     }
-    if (job.type === 'qualify') return 'Qualificazione AI in corso...';
-    return 'Generazione email in corso...';
+    if (job.type === 'qualify') return 'Qualificazione AI in corso... (fino a 30s)';
+    return 'Generazione email in corso... (fino a 60s)';
   };
 
   const handleDelete = async () => {
@@ -281,22 +281,76 @@ function TabLeadPipeline({ isActive }) {
   };
 
   const handleQualify = async () => {
+    // Sincrono — awaita risposta diretta (no job polling)
+    const leadsToSend = selectedIds.length > 0 ? selectedIds : leads.map(l => l.id);
+    if (leadsToSend.length === 0) return;
+
+    setActiveJob({ type: 'qualify', status: 'processing', progress: 30, total: 100, phase: 'qualifying' });
+
     try {
-      const payload = selectedIds.length > 0 ? { leadIds: selectedIds } : {};
-      const result = await qualifyOutreachLeads(payload);
-      setActiveJob({ jobId: result.jobId, type: 'qualify', status: 'processing', progress: 0, total: result.total });
+      // Invia anche i lead objects come fallback per cold instance
+      const cachedLeads = allLeadsCache.current.filter(l => leadsToSend.includes(l.id));
+      const result = await qualifyOutreachLeads({
+        leadIds: leadsToSend,
+        leads: cachedLeads.length > 0 ? cachedLeads : leads
+      });
+
+      // Aggiorna cache locale con lead qualificati
+      if (result.results?.length > 0) {
+        for (const qual of result.results) {
+          const cached = allLeadsCache.current.find(l => l.id === qual.id);
+          if (cached) {
+            Object.assign(cached, { icp_score: qual.score, priority: qual.priority, status: 'qualified',
+              pain_point: qual.pain_point, hook: qual.hook, icp_reasons: [qual.fit_reason] });
+          }
+        }
+        try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
+      }
+
+      setActiveJob({
+        type: 'qualify', status: 'completed', progress: 100, total: 100,
+        results: result.results
+      });
+      loadLeads();
+      loadStats();
+      setTimeout(() => setActiveJob(null), 5000);
     } catch (err) {
       console.error('Qualify error:', err);
+      setActiveJob({ type: 'qualify', status: 'failed', error: err.message });
     }
   };
 
   const handleGenerateEmails = async () => {
     if (selectedIds.length === 0) return;
+
+    setActiveJob({ type: 'generate-emails', status: 'processing', progress: 20, total: 100, phase: 'generating' });
+
     try {
-      const result = await generateOutreachEmails({ leadIds: selectedIds });
-      setActiveJob({ jobId: result.jobId, type: 'generate-emails', status: 'processing', progress: 0, total: result.total });
+      const cachedLeads = allLeadsCache.current.filter(l => selectedIds.includes(l.id));
+      const result = await generateOutreachEmails({
+        leadIds: selectedIds,
+        leads: cachedLeads.length > 0 ? cachedLeads : leads.filter(l => selectedIds.includes(l.id))
+      });
+
+      // Aggiorna cache locale
+      if (result.leads?.length > 0) {
+        for (const updated of result.leads) {
+          const idx = allLeadsCache.current.findIndex(l => l.id === updated.id);
+          if (idx >= 0) allLeadsCache.current[idx] = { ...allLeadsCache.current[idx], ...updated };
+        }
+        try { localStorage.setItem('mia_discovered_leads', JSON.stringify(allLeadsCache.current)); } catch {}
+      }
+
+      setActiveJob({
+        type: 'generate-emails', status: 'completed', progress: 100, total: 100,
+        results: result
+      });
+      loadLeads();
+      loadStats();
+      setTimeout(() => setActiveJob(null), 5000);
     } catch (err) {
       console.error('Email gen error:', err);
+      setActiveJob({ type: 'generate-emails', status: 'failed', error: err.message });
     }
   };
 
@@ -361,8 +415,8 @@ function TabLeadPipeline({ isActive }) {
                 ? `Ricerca completata! ${activeJob.results.added} lead aggiunti${activeJob.results?.filtered_out ? `, ${activeJob.results.filtered_out} scartati dall'AI` : ''}.`
                 : `Ricerca completata ma nessun lead trovato.`
               : activeJob.type === 'qualify'
-                ? `Qualificazione completata! ${activeJob.total} lead processati.`
-                : `Email generate! ${activeJob.total} lead processati.`
+                ? `Qualificazione completata! ${activeJob.results?.length || 0} lead qualificati con score ICP.`
+                : `Email generate per ${activeJob.results?.generated || activeJob.results?.leads?.length || 0} lead!`
             }
           </div>
           {activeJob.type === 'discover' && activeJob.results?.warnings?.length > 0 && (

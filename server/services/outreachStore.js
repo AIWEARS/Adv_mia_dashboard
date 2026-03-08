@@ -9,7 +9,11 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_FILE = resolve(__dirname, '..', 'data', 'outreach-store.json');
+// Su Vercel il filesystem del progetto è read-only; /tmp è scrivibile e persiste
+// nella stessa istanza serverless (warm instance) tra richieste successive.
+const DATA_FILE = process.env.VERCEL
+  ? '/tmp/outreach-store.json'
+  : resolve(__dirname, '..', 'data', 'outreach-store.json');
 
 let store = {
   leads: [],

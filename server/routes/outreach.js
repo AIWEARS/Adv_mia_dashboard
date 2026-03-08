@@ -280,7 +280,7 @@ router.post('/discover', async (req, res) => {
 });
 
 // ============================================================
-// AI QUALIFICATION (asincrona con job)
+// AI QUALIFICATION (sincrona, max 60s)
 // ============================================================
 
 router.post('/qualify', async (req, res) => {
@@ -289,12 +289,19 @@ router.post('/qualify', async (req, res) => {
       return res.status(503).json({ error: 'Gemini API non disponibile. Configura GEMINI_API_KEY.' });
     }
 
-    const { leadIds, campaignId } = req.body;
+    const { leadIds, leads: clientLeads, campaignId } = req.body;
 
-    // Recupera i lead da qualificare
+    // Recupera i lead da qualificare (prima dallo store, poi dal client come fallback)
     let leadsToQualify;
     if (leadIds && Array.isArray(leadIds)) {
       leadsToQualify = leadIds.map(id => getLead(id)).filter(Boolean);
+      // Fallback: se lo store e' vuoto (cold instance), usa i lead dal client
+      if (leadsToQualify.length === 0 && Array.isArray(clientLeads) && clientLeads.length > 0) {
+        // Re-importa i lead dal client nello store
+        const imported = addLeads(clientLeads);
+        leadsToQualify = leadIds.map(id => getLead(id)).filter(Boolean);
+        console.log(`[Outreach] Cold instance: re-imported ${imported.added} leads from client`);
+      }
     } else if (campaignId) {
       leadsToQualify = getLeads({ campaign: campaignId });
     } else {
@@ -302,59 +309,48 @@ router.post('/qualify', async (req, res) => {
     }
 
     if (leadsToQualify.length === 0) {
-      return res.status(400).json({ error: 'Nessun lead da qualificare' });
+      return res.status(400).json({ error: 'Nessun lead da qualificare. Prova a cercare nuovi lead.' });
     }
 
-    // Crea job asincrono
-    const jobId = createJob('qualify', leadsToQualify.length);
-    res.json({ jobId, status: 'processing', total: leadsToQualify.length });
+    // Processing sincrono
+    const BATCH_SIZE = 10;
+    const allResults = [];
 
-    // Processing in background (waitUntil mantiene vivo il job su Vercel)
-    const qualifyPromise = processQualification(jobId, leadsToQualify).catch(err => {
-      console.error('[Outreach] Qualification job failed:', err.message);
-      updateJob(jobId, { status: 'failed', error: err.message });
+    for (let i = 0; i < leadsToQualify.length; i += BATCH_SIZE) {
+      const batch = leadsToQualify.slice(i, i + BATCH_SIZE);
+      const results = await qualifyLeadBatch(batch);
+
+      if (results && results.length > 0) {
+        for (const qual of results) {
+          const lead = updateLead(qual.id, {
+            icp_score: qual.score,
+            icp_reasons: [qual.fit_reason],
+            pain_point: qual.pain_point,
+            hook: qual.hook,
+            recommended_service: qual.recommended_service,
+            priority: qual.priority,
+            status: 'qualified'
+          });
+          if (lead) allResults.push({ ...qual, lead });
+        }
+      }
+    }
+
+    saveStore();
+    res.json({
+      status: 'completed',
+      total: leadsToQualify.length,
+      qualified: allResults.length,
+      results: allResults
     });
-    waitUntil(qualifyPromise);
   } catch (err) {
     console.error('[Outreach] Qualify error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-async function processQualification(jobId, leads) {
-  const BATCH_SIZE = 10;
-  let processed = 0;
-  const allResults = [];
-
-  for (let i = 0; i < leads.length; i += BATCH_SIZE) {
-    const batch = leads.slice(i, i + BATCH_SIZE);
-    const results = await qualifyLeadBatch(batch);
-
-    if (results && results.length > 0) {
-      for (const qual of results) {
-        const lead = updateLead(qual.id, {
-          icp_score: qual.score,
-          icp_reasons: [qual.fit_reason],
-          pain_point: qual.pain_point,
-          hook: qual.hook,
-          recommended_service: qual.recommended_service,
-          priority: qual.priority,
-          status: 'qualified'
-        });
-        if (lead) allResults.push(qual);
-      }
-    }
-
-    processed += batch.length;
-    updateJob(jobId, { progress: processed, results: allResults });
-  }
-
-  updateJob(jobId, { status: 'completed', progress: leads.length, results: allResults });
-  saveStore();
-}
-
 // ============================================================
-// AI EMAIL GENERATION (asincrona con job)
+// AI EMAIL GENERATION (sincrona, max 60s)
 // ============================================================
 
 router.post('/generate-emails', async (req, res) => {
@@ -363,11 +359,16 @@ router.post('/generate-emails', async (req, res) => {
       return res.status(503).json({ error: 'Gemini API non disponibile. Configura GEMINI_API_KEY.' });
     }
 
-    const { leadIds, campaignId, sequenceType = 'hot' } = req.body;
+    const { leadIds, leads: clientLeads, campaignId, sequenceType = 'hot' } = req.body;
 
     let leadsForEmails;
     if (leadIds && Array.isArray(leadIds)) {
       leadsForEmails = leadIds.map(id => getLead(id)).filter(Boolean);
+      // Fallback: cold instance
+      if (leadsForEmails.length === 0 && Array.isArray(clientLeads) && clientLeads.length > 0) {
+        addLeads(clientLeads);
+        leadsForEmails = leadIds.map(id => getLead(id)).filter(Boolean);
+      }
     } else if (campaignId) {
       leadsForEmails = getLeads({ campaign: campaignId }).filter(l => l.icp_score !== null);
     } else {
@@ -378,58 +379,46 @@ router.post('/generate-emails', async (req, res) => {
     leadsForEmails = leadsForEmails.filter(l => l.icp_score !== null && l.icp_score >= 50);
 
     if (leadsForEmails.length === 0) {
-      return res.status(400).json({ error: 'Nessun lead qualificato per generare email' });
+      return res.status(400).json({ error: 'Nessun lead qualificato per generare email. Esegui prima "Qualifica AI".' });
     }
 
-    const jobId = createJob('generate-emails', leadsForEmails.length);
-    res.json({ jobId, status: 'processing', total: leadsForEmails.length });
+    // Processing sincrono
+    const emailCount = sequenceType === 'hot' ? 4 : 3;
+    const generatedLeads = [];
 
-    // Processing in background (waitUntil mantiene vivo il job su Vercel)
-    const emailPromise = processEmailGeneration(jobId, leadsForEmails, sequenceType).catch(err => {
-      console.error('[Outreach] Email gen job failed:', err.message);
-      updateJob(jobId, { status: 'failed', error: err.message });
+    for (const lead of leadsForEmails) {
+      try {
+        const subjects = await generateEmailSubjects(lead, 1);
+        const emails = {};
+        for (let i = 1; i <= emailCount; i++) {
+          const body = await generateOutreachEmail(lead, i, sequenceType);
+          if (body) emails[`email_body_${i}`] = body;
+        }
+
+        const updated = updateLead(lead.id, {
+          email_subject_a: subjects?.variant_a || '',
+          email_subject_b: subjects?.variant_b || '',
+          ...emails,
+          status: 'email_ready'
+        });
+        if (updated) generatedLeads.push(updated);
+      } catch (err) {
+        console.error(`[Outreach] Email gen for ${lead.company} failed:`, err.message);
+      }
+    }
+
+    saveStore();
+    res.json({
+      status: 'completed',
+      total: leadsForEmails.length,
+      generated: generatedLeads.length,
+      leads: generatedLeads
     });
-    waitUntil(emailPromise);
   } catch (err) {
     console.error('[Outreach] Generate emails error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
-
-async function processEmailGeneration(jobId, leads, sequenceType) {
-  let processed = 0;
-  const emailCount = sequenceType === 'hot' ? 4 : 3; // HOT: 3+1 follow-up, WARM: 2+1
-
-  for (const lead of leads) {
-    try {
-      // Genera oggetti A/B
-      const subjects = await generateEmailSubjects(lead, 1);
-
-      // Genera corpo email per ogni step della sequenza
-      const emails = {};
-      for (let i = 1; i <= emailCount; i++) {
-        const body = await generateOutreachEmail(lead, i, sequenceType);
-        if (body) emails[`email_body_${i}`] = body;
-      }
-
-      // Aggiorna lead con email generate
-      updateLead(lead.id, {
-        email_subject_a: subjects?.variant_a || '',
-        email_subject_b: subjects?.variant_b || '',
-        ...emails,
-        status: 'email_ready'
-      });
-    } catch (err) {
-      console.error(`[Outreach] Email gen for ${lead.company} failed:`, err.message);
-    }
-
-    processed++;
-    updateJob(jobId, { progress: processed });
-  }
-
-  updateJob(jobId, { status: 'completed', progress: leads.length });
-  saveStore();
-}
 
 // ============================================================
 // JOB STATUS (polling)
