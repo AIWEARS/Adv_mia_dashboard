@@ -1,3 +1,6 @@
+// Timeout massimo 60s per Vercel (necessario per enrichment lead)
+export const maxDuration = 60;
+
 let app;
 try {
   const mod = await import('../server/index.js');

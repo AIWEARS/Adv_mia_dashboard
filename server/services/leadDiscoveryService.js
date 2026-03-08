@@ -244,7 +244,7 @@ async function enrichLead(lead) {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
+    const timeout = setTimeout(() => controller.abort(), 5000);
 
     const response = await fetch(url, {
       headers: { 'User-Agent': USER_AGENT },
@@ -499,19 +499,20 @@ export async function discoverLeads(jobId, params) {
   console.log(`[Discovery] Trovati ${found} lead unici dopo deduplica`);
   updateJob(jobId, { total: found, phase: 'enriching' });
 
-  // Fase 2: Enrichment
+  // Fase 2: Enrichment (parallelizzato x3 per velocita, timeout 5s per sito)
   let enriched = 0;
-  for (const lead of allLeads) {
-    try {
-      await enrichLead(lead);
-    } catch (err) {
-      console.warn(`[Discovery] Enrichment failed for ${lead.website}: ${err.message}`);
-    }
-    enriched++;
+  const PARALLEL = 3;
+  for (let i = 0; i < allLeads.length; i += PARALLEL) {
+    const batch = allLeads.slice(i, i + PARALLEL);
+    await Promise.all(batch.map(lead =>
+      enrichLead(lead).catch(err => {
+        console.warn(`[Discovery] Enrichment failed for ${lead.website}: ${err.message}`);
+      })
+    ));
+    enriched += batch.length;
     updateJob(jobId, { progress: enriched, phase: 'enriching' });
-    // Rate limiting: 1s tra richieste
-    if (enriched < allLeads.length) {
-      await new Promise(r => setTimeout(r, 1000));
+    if (i + PARALLEL < allLeads.length) {
+      await new Promise(r => setTimeout(r, 300));
     }
   }
 
