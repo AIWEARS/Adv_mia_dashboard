@@ -164,8 +164,14 @@ function TabCampagneOutreach({ isActive }) {
         return;
       }
 
-      // Formato Instantly.ai
-      const header = 'email,first_name,last_name,company_name,website,custom1,custom2,custom3,custom4,custom5';
+      // Helper: rimuovi "Oggetto: ..." dal body se presente (vecchie email)
+      const stripSubject = (body) => {
+        if (!body) return '';
+        return body.replace(/^(?:Oggetto|Subject|Re):\s*[^\n]+\n+/i, '').trim();
+      };
+
+      // Formato Instantly.ai con subject e body separati
+      const header = 'email,first_name,last_name,company_name,website,subject_a,subject_b,body1,body2,body3,body4';
       const rows = leadsWithEmail.map(l => {
         const nameParts = (l.contact_name || '').split(' ');
         const firstName = nameParts[0] || '';
@@ -176,11 +182,12 @@ function TabCampagneOutreach({ isActive }) {
           csvEscape(lastName),
           csvEscape(l.company),
           csvEscape(l.website),
-          csvEscape(l.email_body_1),
-          csvEscape(l.email_body_2),
-          csvEscape(l.email_body_3),
-          csvEscape(l.email_body_4),
-          csvEscape(l.country || '')
+          csvEscape(l.email_subject_a || ''),
+          csvEscape(l.email_subject_b || ''),
+          csvEscape(stripSubject(l.email_body_1)),
+          csvEscape(stripSubject(l.email_body_2)),
+          csvEscape(stripSubject(l.email_body_3)),
+          csvEscape(stripSubject(l.email_body_4))
         ].join(',');
       });
 

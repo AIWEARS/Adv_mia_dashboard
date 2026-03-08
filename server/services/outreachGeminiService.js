@@ -207,7 +207,12 @@ export async function generateOutreachEmail(lead, emailNumber, sequenceType) {
         }
       });
 
-      return response.text?.trim() || null;
+      let text = response.text?.trim() || null;
+      // Safety: rimuovi "Oggetto: ..." se Gemini lo include nonostante le istruzioni
+      if (text) {
+        text = text.replace(/^(?:Oggetto|Subject|Re):\s*[^\n]+\n+/i, '').trim();
+      }
+      return text;
     } catch (error) {
       console.error(`[OutreachGemini] Email gen attempt ${attempt + 1}/${maxRetries} failed:`, error.message);
       if (attempt < maxRetries - 1) {
@@ -252,9 +257,9 @@ L'email deve:
 - Includere un dato concreto (riduzione costi shooting del 90%, da settimane a minuti)
 - CTA: invito a provare gratuitamente su app.miafashion.it
 - Max 120 parole
-- Includere in fondo: {{unsubscribe}} per GDPR
+- Chiudi con: Federico, MIA - itsmia.it e poi {{unsubscribe}} per GDPR
 
-Restituisci SOLO il testo dell'email.`;
+IMPORTANTE: Restituisci SOLO il corpo dell'email. NON includere oggetto, "Oggetto:", "Subject:" o simili. Inizia direttamente con il saluto o il testo.`;
 
     case 2:
       return `Scrivi il follow-up #2 per ${lead.contact_name} di ${lead.company}. Non hanno risposto.
@@ -267,9 +272,9 @@ L'email deve:
 - Mostrare un beneficio specifico per ${lead.product_category}
 - CTA: link a app.miafashion.it per provare gratis
 - Max 100 parole
-- Includere in fondo: {{unsubscribe}}
+- Chiudi con: Federico, MIA - itsmia.it e poi {{unsubscribe}}
 
-Restituisci SOLO il testo dell'email.`;
+IMPORTANTE: Restituisci SOLO il corpo dell'email. NON includere oggetto, "Oggetto:", "Subject:" o simili. Inizia direttamente con il testo.`;
 
     case 3:
       return `Scrivi la terza email per ${lead.contact_name} di ${lead.company}.
@@ -282,9 +287,9 @@ L'email deve:
 - Creare leggera urgenza senza essere pushy
 - CTA: 'Prova gratis - nessuna carta di credito richiesta' -> app.miafashion.it
 - Max 100 parole
-- Includere in fondo: {{unsubscribe}}
+- Chiudi con: Federico, MIA - itsmia.it e poi {{unsubscribe}}
 
-Restituisci SOLO il testo dell'email.`;
+IMPORTANTE: Restituisci SOLO il corpo dell'email. NON includere oggetto, "Oggetto:", "Subject:" o simili. Inizia direttamente con il testo.`;
 
     case 4:
       return `Scrivi l'ultima email (breakup) per ${lead.contact_name} di ${lead.company}.
@@ -298,9 +303,9 @@ L'email deve:
 - Lascia la porta aperta
 - CTA finale: link a app.miafashion.it
 - Max 80 parole
-- Includere in fondo: {{unsubscribe}}
+- Chiudi con: Federico, MIA - itsmia.it e poi {{unsubscribe}}
 
-Restituisci SOLO il testo dell'email.`;
+IMPORTANTE: Restituisci SOLO il corpo dell'email. NON includere oggetto, "Oggetto:", "Subject:" o simili. Inizia direttamente con il testo.`;
 
     default:
       return `Scrivi un'email di outreach per ${lead.contact_name} di ${lead.company}.\n\n${base}\n\nMax 100 parole. Restituisci SOLO il testo.`;

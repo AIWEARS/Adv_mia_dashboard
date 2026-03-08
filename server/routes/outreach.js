@@ -467,8 +467,14 @@ router.get('/export/:campaignId', (req, res) => {
       return res.status(400).json({ error: 'Nessun lead con email pronte per l\'export' });
     }
 
-    // Formato Instantly.ai
-    const header = 'email,first_name,last_name,company_name,website,custom1,custom2,custom3,custom4,custom5';
+    // Helper: rimuovi "Oggetto: ..." dal body se presente
+    const stripSubject = (body) => {
+      if (!body) return '';
+      return body.replace(/^(?:Oggetto|Subject|Re):\s*[^\n]+\n+/i, '').trim();
+    };
+
+    // Formato Instantly.ai con subject e body separati
+    const header = 'email,first_name,last_name,company_name,website,subject_a,subject_b,body1,body2,body3,body4';
     const rows = leads.map(l => {
       const nameParts = (l.contact_name || '').split(' ');
       const firstName = nameParts[0] || '';
@@ -479,11 +485,12 @@ router.get('/export/:campaignId', (req, res) => {
         csvEscape(lastName),
         csvEscape(l.company),
         csvEscape(l.website),
-        csvEscape(l.email_body_1),
-        csvEscape(l.email_body_2),
-        csvEscape(l.email_body_3),
-        csvEscape(l.email_body_4),
-        csvEscape(l.country || l.language || '')
+        csvEscape(l.email_subject_a || ''),
+        csvEscape(l.email_subject_b || ''),
+        csvEscape(stripSubject(l.email_body_1)),
+        csvEscape(stripSubject(l.email_body_2)),
+        csvEscape(stripSubject(l.email_body_3)),
+        csvEscape(stripSubject(l.email_body_4))
       ].join(',');
     });
 
