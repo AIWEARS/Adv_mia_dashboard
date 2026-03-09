@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Megaphone, Plus, Download, Eye, Mail, Send, Archive,
   Loader2, X, CheckCircle, Users, Trash2, ChevronRight,
-  AlertCircle, Play, Pause, Clock
+  AlertCircle, Play, Pause, Clock, Edit3, Save, ChevronDown
 } from 'lucide-react';
 import Card from '../ui/Card';
 import MetricCard from '../ui/MetricCard';
@@ -63,6 +63,13 @@ function TabCampagneOutreach({ isActive }) {
   const [sendPaused, setSendPaused] = useState(false);
   const sendPausedRef = useRef(false);
   const sendAbortRef = useRef(false);
+
+  // Email preview/edit state
+  const [expandedLeadId, setExpandedLeadId] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
+  const [editTab, setEditTab] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
 
   const loadCampaigns = useCallback(async () => {
     setLoading(true);
@@ -411,6 +418,55 @@ function TabCampagneOutreach({ isActive }) {
     }
   };
 
+  // Email preview/edit handlers
+  const handleExpandLead = (lead) => {
+    if (expandedLeadId === lead.id) {
+      setExpandedLeadId(null);
+      setEditDraft(null);
+      setSaveMsg('');
+      return;
+    }
+    setExpandedLeadId(lead.id);
+    setEditTab(1);
+    setSaveMsg('');
+    setEditDraft({
+      email_subject_a: lead.email_subject_a || '',
+      email_subject_b: lead.email_subject_b || '',
+      email_body_1: lead.email_body_1 || '',
+      email_body_2: lead.email_body_2 || '',
+      email_body_3: lead.email_body_3 || '',
+      email_body_4: lead.email_body_4 || '',
+    });
+  };
+
+  const handleSaveEmail = async () => {
+    if (!editDraft || !expandedLeadId) return;
+    setSaving(true);
+    setSaveMsg('');
+    try {
+      await updateOutreachLead(expandedLeadId, editDraft);
+      // Aggiorna state locale
+      setCampaignLeads(prev => prev.map(l =>
+        l.id === expandedLeadId ? { ...l, ...editDraft } : l
+      ));
+      // Aggiorna localStorage
+      try {
+        const cached = JSON.parse(localStorage.getItem('mia_discovered_leads') || '[]');
+        const idx = cached.findIndex(c => c.id === expandedLeadId);
+        if (idx >= 0) {
+          cached[idx] = { ...cached[idx], ...editDraft };
+          localStorage.setItem('mia_discovered_leads', JSON.stringify(cached));
+        }
+      } catch {}
+      setSaveMsg('Salvato!');
+      setTimeout(() => setSaveMsg(''), 3000);
+    } catch (err) {
+      setSaveMsg(`Errore: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Conta lead per status invio
   const sentCount = campaignLeads.filter(l => l.email_send_status?.startsWith('step') || l.status === 'sent').length;
   const readyCount = campaignLeads.filter(l => l.email_body_1 && l.contact_email && !l.email_send_status).length;
@@ -697,28 +753,111 @@ function TabCampagneOutreach({ isActive }) {
                 <tbody>
                   {campaignLeads.map((lead) => {
                     const sendStatus = LEAD_SEND_STATUS[lead.email_send_status] || LEAD_SEND_STATUS[lead.status] || null;
+                    const isExpanded = expandedLeadId === lead.id;
                     return (
-                      <tr key={lead.id} className="border-b border-slate-100">
-                        <td className="px-3 py-2 font-medium text-slate-800">{lead.company}</td>
-                        <td className="px-3 py-2 text-slate-600 text-xs">{lead.contact_email || <span className="text-red-400">Mancante</span>}</td>
-                        <td className="px-3 py-2">
-                          <span className={lead.icp_score >= 70 ? 'text-green-600 font-bold' : lead.icp_score >= 50 ? 'text-amber-600' : 'text-slate-400'}>
-                            {lead.icp_score ?? '-'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2">
-                          {sendStatus ? (
-                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${sendStatus.color}`}>
-                              {sendStatus.label}
+                      <React.Fragment key={lead.id}>
+                        <tr
+                          onClick={() => lead.email_body_1 && handleExpandLead(lead)}
+                          className={`border-b border-slate-100 ${lead.email_body_1 ? 'cursor-pointer hover:bg-slate-50' : ''} ${isExpanded ? 'bg-blue-50/50' : ''}`}
+                        >
+                          <td className="px-3 py-2 font-medium text-slate-800 flex items-center gap-1.5">
+                            {lead.email_body_1 && (
+                              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            )}
+                            {lead.company}
+                          </td>
+                          <td className="px-3 py-2 text-slate-600 text-xs">{lead.contact_email || <span className="text-red-400">Mancante</span>}</td>
+                          <td className="px-3 py-2">
+                            <span className={lead.icp_score >= 70 ? 'text-green-600 font-bold' : lead.icp_score >= 50 ? 'text-amber-600' : 'text-slate-400'}>
+                              {lead.icp_score ?? '-'}
                             </span>
-                          ) : (
-                            <span className="text-xs text-slate-400">-</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-xs text-slate-500 max-w-[300px] truncate">
-                          {lead.email_subject_a || (lead.email_body_1 ? lead.email_body_1.substring(0, 60) + '...' : '-')}
-                        </td>
-                      </tr>
+                          </td>
+                          <td className="px-3 py-2">
+                            {sendStatus ? (
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${sendStatus.color}`}>
+                                {sendStatus.label}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-xs text-slate-500 max-w-[300px] truncate">
+                            {lead.email_subject_a || (lead.email_body_1 ? lead.email_body_1.substring(0, 60) + '...' : '-')}
+                          </td>
+                        </tr>
+                        {/* Pannello anteprima/modifica email */}
+                        {isExpanded && editDraft && (
+                          <tr>
+                            <td colSpan={5} className="p-0">
+                              <div className="px-4 py-4 bg-slate-50 border-b-2 border-blue-200">
+                                {/* Subject A/B */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                                  <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Subject A</label>
+                                    <input
+                                      type="text"
+                                      value={editDraft.email_subject_a}
+                                      onChange={(e) => setEditDraft(d => ({ ...d, email_subject_a: e.target.value }))}
+                                      className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-mia-blue/20 focus:border-mia-blue"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Subject B</label>
+                                    <input
+                                      type="text"
+                                      value={editDraft.email_subject_b}
+                                      onChange={(e) => setEditDraft(d => ({ ...d, email_subject_b: e.target.value }))}
+                                      className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-mia-blue/20 focus:border-mia-blue"
+                                    />
+                                  </div>
+                                </div>
+                                {/* Email step tabs */}
+                                <div className="flex items-center gap-1 mb-3">
+                                  {[1, 2, 3, 4].map(step => (
+                                    <button
+                                      key={step}
+                                      onClick={() => setEditTab(step)}
+                                      className={`px-3 py-1 text-xs font-medium rounded-lg transition-smooth ${
+                                        editTab === step
+                                          ? 'bg-mia-blue text-white'
+                                          : editDraft[`email_body_${step}`]
+                                            ? 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                                            : 'bg-slate-100 text-slate-400'
+                                      }`}
+                                    >
+                                      Email {step}
+                                    </button>
+                                  ))}
+                                </div>
+                                {/* Email body textarea */}
+                                <textarea
+                                  value={editDraft[`email_body_${editTab}`] || ''}
+                                  onChange={(e) => setEditDraft(d => ({ ...d, [`email_body_${editTab}`]: e.target.value }))}
+                                  rows={8}
+                                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-mia-blue/20 focus:border-mia-blue font-mono leading-relaxed resize-y"
+                                  placeholder={`Corpo email step ${editTab}...`}
+                                />
+                                {/* Save button */}
+                                <div className="flex items-center gap-3 mt-3">
+                                  <button
+                                    onClick={handleSaveEmail}
+                                    disabled={saving}
+                                    className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg bg-mia-blue text-white hover:bg-mia-blue/90 disabled:opacity-50 transition-smooth"
+                                  >
+                                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                    Salva
+                                  </button>
+                                  {saveMsg && (
+                                    <span className={`text-xs font-medium ${saveMsg.startsWith('Errore') ? 'text-red-500' : 'text-emerald-500'}`}>
+                                      {saveMsg}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
