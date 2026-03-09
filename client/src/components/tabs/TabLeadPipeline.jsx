@@ -382,8 +382,8 @@ function TabLeadPipeline({ isActive }) {
       return;
     }
 
-    // Batching: max 5 lead per chiamata per stare dentro i 60s di Vercel
-    const BATCH_SIZE = 5;
+    // Batching: 1 lead per chiamata (5 Gemini calls parallele, safe per 60s Vercel)
+    const BATCH_SIZE = 1;
     const batches = [];
     for (let i = 0; i < idsToProcess.length; i += BATCH_SIZE) {
       batches.push(idsToProcess.slice(i, i + BATCH_SIZE));

@@ -417,7 +417,7 @@ router.post('/qualify', async (req, res) => {
 });
 
 // ============================================================
-// AI EMAIL GENERATION (sincrona, max 60s)
+// AI EMAIL GENERATION (sincrona, chiamate Gemini parallelizzate per lead)
 // ============================================================
 
 router.post('/generate-emails', async (req, res) => {
@@ -459,18 +459,25 @@ router.post('/generate-emails', async (req, res) => {
       console.log(`[Outreach] Auto-created campaign: ${name} (${targetCampaignId})`);
     }
 
-    // Processing sincrono
+    // Processing con chiamate Gemini parallelizzate per lead
     const emailCount = sequenceType === 'hot' ? 4 : 3;
     const generatedLeads = [];
 
     for (const lead of leadsForEmails) {
       try {
-        const subjects = await generateEmailSubjects(lead, 1);
+        // Parallelizza: subject + tutti i body in contemporanea
+        const promises = [
+          generateEmailSubjects(lead, 1),
+          ...Array.from({ length: emailCount }, (_, i) =>
+            generateOutreachEmail(lead, i + 1, sequenceType)
+          )
+        ];
+        const [subjects, ...bodies] = await Promise.all(promises);
+
         const emails = {};
-        for (let i = 1; i <= emailCount; i++) {
-          const body = await generateOutreachEmail(lead, i, sequenceType);
-          if (body) emails[`email_body_${i}`] = body;
-        }
+        bodies.forEach((body, i) => {
+          if (body) emails[`email_body_${i + 1}`] = body;
+        });
 
         const updated = updateLead(lead.id, {
           email_subject_a: subjects?.variant_a || '',
