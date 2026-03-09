@@ -602,7 +602,7 @@ function TabCampagneOutreach({ isActive }) {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
               <Megaphone className="w-5 h-5 text-mia-blue" />
-              {selectedCampaign.name}
+              {selectedCampaign.name || `Campagna ${new Date(selectedCampaign.created_at).toLocaleDateString('it-IT')}`}
             </h3>
             <div className="flex items-center gap-2">
               {/* Invia Email Button */}

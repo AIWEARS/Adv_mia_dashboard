@@ -114,7 +114,13 @@ function TabLeadPipeline({ isActive }) {
 
     function applyLocalFilters() {
       let filtered = [...allLeadsCache.current];
-      if (filters.status) filtered = filtered.filter(l => l.status === filters.status);
+      if (filters.status) {
+        const statusGroups = {
+          contacted: ['contacted', 'sent', 'exported', 'replied', 'converted'],
+        };
+        const matchStatuses = statusGroups[filters.status] || [filters.status];
+        filtered = filtered.filter(l => matchStatuses.includes(l.status));
+      }
       if (filters.search) {
         const q = filters.search.toLowerCase();
         filtered = filtered.filter(l =>
