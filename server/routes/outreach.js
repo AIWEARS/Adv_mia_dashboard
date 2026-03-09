@@ -327,7 +327,9 @@ router.post('/find-emails', async (req, res) => {
       status: 'completed',
       found: result.found,
       total: result.total,
-      leads: leadsNoEmail.filter(l => l.enrichment_data?.email_source === 'apollo_people')
+      creditsUsed: result.creditsUsed || 0,
+      debug: result.debug || [],
+      leads: leadsNoEmail.filter(l => l.enrichment_data?.email_source === 'apollo_people' || l.enrichment_data?.email_source === 'apollo_search')
         .map(l => ({ id: l.id, contact_email: l.contact_email, contact_name: l.contact_name, contact_title: l.contact_title }))
     });
   } catch (err) {

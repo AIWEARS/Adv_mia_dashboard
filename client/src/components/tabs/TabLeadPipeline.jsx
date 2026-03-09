@@ -519,16 +519,22 @@ function TabLeadPipeline({ isActive }) {
         }
 
         totalFound += result.found || 0;
+        // Raccogli debug da ogni batch
+        if (result.debug?.length > 0) {
+          console.log('[Apollo Debug]', JSON.stringify(result.debug, null, 2));
+        }
         processed += batchIds.length;
         setActiveJob(prev => prev?.status === 'processing' ? {
-          ...prev, progress: processed, total, phase: `searching (${processed}/${total})`
+          ...prev, progress: processed, total, phase: `searching (${processed}/${total})`,
+          _debug: [...(prev._debug || []), ...(result.debug || [])]
         } : prev);
       }
 
-      setActiveJob({
+      setActiveJob(prev => ({
         type: 'find-emails', status: 'completed', progress: total, total,
-        results: { found: totalFound, total }
-      });
+        results: { found: totalFound, total },
+        _debug: prev?._debug || []
+      }));
       loadLeads();
       loadStats();
       setTimeout(() => setActiveJob(null), 5000);
@@ -598,7 +604,7 @@ function TabLeadPipeline({ isActive }) {
                 ? `Ricerca completata! ${activeJob.results.added} lead aggiunti${activeJob.results?.filtered_out ? `, ${activeJob.results.filtered_out} scartati dall'AI` : ''}.`
                 : `Ricerca completata ma nessun lead trovato.`
               : activeJob.type === 'find-emails'
-                ? `Ricerca email completata! ${activeJob.results?.found || 0} email trovate su ${activeJob.results?.total || 0} lead cercati.`
+                ? `Ricerca email completata! ${activeJob.results?.found || 0} email trovate su ${activeJob.results?.total || 0} lead cercati.${activeJob._debug?.length > 0 ? ' Debug: ' + activeJob._debug.map(d => `[${d.domain}: ${d.step} - ${d.detail}]`).join(' ') : ''}`
                 : activeJob.type === 'qualify'
                   ? `Qualificazione completata! ${activeJob.results?.length || 0} lead qualificati con score ICP.`
                   : `Email generate per ${activeJob.results?.generated || activeJob.results?.leads?.length || 0} lead!${activeJob.campaignInfo || ' Vai a Campagne Outreach per esportare.'}`
