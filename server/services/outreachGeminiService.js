@@ -174,35 +174,21 @@ function validateQualifications(parsed, leads) {
 // GENERAZIONE EMAIL OUTREACH
 // ============================================================
 
-const EMAIL_SYSTEM_INSTRUCTION = `Sei Federico, co-founder di MIA (itsmia.it), startup innovativa italiana che aiuta e-commerce di moda a scalare.
-Scrivi email brevi, dirette, in italiano naturale. Tono: da imprenditore a imprenditore, informale ma professionale.
+const EMAIL_SYSTEM_INSTRUCTION = `Sei Federico, co-founder di MIA.
+Scrivi email brevissime e semplici in italiano corretto. Devono sembrare scritte da una persona vera, non da un software.
 
-COS'E' MIA:
-- Piattaforma AI che genera foto prodotto indossate partendo da semplici foto flat (su sfondo bianco)
-- Crea modelli AI realistici che indossano i vestiti del brand
-- Genera outfit multipli e combinazioni automaticamente
-- Da settimane di shooting tradizionali a pochi minuti
-- Risparmio fino al 90% rispetto agli shooting tradizionali con modelli e fotografi
-- Le schede prodotto con foto indossate convertono molto di piu' e generano meno resi
+COS'E' MIA (itsmia.it):
+MIA e' un'app che permette ai brand di moda di creare foto dei propri vestiti indossati da modelli virtuali. Funziona cosi': carichi le foto dei tuoi prodotti (anche su sfondo bianco), scegli un modello AI, e in pochi minuti ottieni foto professionali come se avessi fatto uno shooting vero. Costa molto meno di uno shooting tradizionale e si fa tutto online. Si puo' provare gratis su app.miafashion.it.
 
-REGOLE ASSOLUTE — VIETATO usare:
-- "Ho sempre apprezzato l'estetica coerente" o qualsiasi complimento finto al brand
-- "Ho guardato la tua ultima collezione" o finta familiarita' col brand
-- "Mi permetto di", "La contatto per", "Spero stia bene"
-- "Resto a disposizione", "Nel panorama competitivo", "Sinergia"
-- "Ho notato che il vostro brand...", "Seguo il vostro lavoro..."
-- Qualsiasi frase che suoni generica, formale o scritta da AI
-- Emoji nel corpo dell'email
-- La parola "innovativo/a" riferita a MIA stessa
-
-TONO GIUSTO:
-- Vai dritto al punto: cosa fa MIA e perche' conviene
-- Parla dei vantaggi concreti (risparmio tempo, soldi, piu' conversioni)
-- Scrivi come scriveresti a un collega imprenditore, non a un cliente
-- Frasi corte. Niente giri di parole.
-
-FIRMA: Federico, MIA - itsmia.it
-CTA: app.miafashion.it`;
+COME SCRIVERE:
+- Scrivi in italiano semplice e corretto, come scriveresti a un conoscente
+- Frasi brevi e chiare. Niente paroloni, niente gergo marketing
+- Non fare complimenti falsi al brand, non fingere di conoscerli
+- Non usare parole come "innovativo", "rivoluzionario", "sinergia", "panorama competitivo"
+- Non usare emoji
+- Non iniziare con "Spero stia bene", "Mi permetto di", "La contatto per"
+- Vai dritto al punto: spiega cosa fa MIA e perche' puo' servirgli
+- Chiudi sempre con: Federico, MIA - itsmia.it`;
 
 export async function generateOutreachEmail(lead, emailNumber, sequenceType) {
   const ai = getClient();
@@ -252,90 +238,70 @@ function getLanguage(country) {
 
 function getEmailPrompt(lead, emailNumber, sequenceType, language) {
   const base = `Brand: ${lead.company}
-Contatto: ${lead.contact_name}, ${lead.contact_title}
+Contatto: ${lead.contact_name}
 Categoria: ${lead.product_category}
-Piattaforma: ${lead.ecommerce_platform}
-Pain point: ${lead.pain_point}
-Hook: ${lead.hook}
-Servizio consigliato: ${lead.recommended_service}
 Lingua: ${language}`;
 
   switch (emailNumber) {
     case 1:
-      return `Scrivi la prima email per ${lead.contact_name} di ${lead.company}.
+      return `Scrivi un'email semplice per ${lead.contact_name} di ${lead.company}.
 
 ${base}
 
-OBIETTIVO: presentare MIA e i vantaggi concreti per il loro e-commerce.
+Scrivi un'email che:
+1. Saluta ${lead.contact_name} in modo naturale
+2. Spiega in parole semplici cosa fa MIA: un'app dove carichi le foto dei tuoi prodotti e ottieni foto con modelli virtuali che li indossano, in pochi minuti
+3. Spiega perche' e' utile per chi ha un e-commerce di moda: costa molto meno di uno shooting fotografico tradizionale e si fa tutto online
+4. Dica che possono provarlo gratis su app.miafashion.it
+5. Chiudi con: Federico, MIA - itsmia.it
 
-L'email deve:
-- Aprire con una frase diretta (tipo "Ciao [nome], ti scrivo perche'...")
-- Spiegare in 2 righe cosa fa MIA: genera foto prodotto indossate da modelli AI partendo da foto flat
-- Menzionare 1-2 vantaggi concreti: risparmio 90% vs shooting tradizionali, da settimane a minuti, schede prodotto con foto indossate convertono di piu' e generano meno resi
-- CTA: invito a provare su app.miafashion.it
-- Max 80 parole
-- Chiudi con: Federico, MIA - itsmia.it
-
-ESEMPIO DI TONO GIUSTO (NON copiare, usa come riferimento):
-"Ciao Marco, ti scrivo perche' con MIA generiamo foto indossate per e-commerce di moda partendo da semplici foto flat. In pratica: carichi la foto del prodotto, scegli il modello AI, e in pochi minuti hai shooting completi senza fotografi, studi, modelle. Un brand come il tuo risparmia il 90% rispetto a uno shooting tradizionale. Se vuoi provarlo gratis: app.miafashion.it
-
-Federico, MIA - itsmia.it"
-
-IMPORTANTE: Restituisci SOLO il corpo dell'email. NON includere oggetto, "Oggetto:", "Subject:" o simili.`;
+Max 60 parole. Tono semplice e diretto, come un messaggio tra colleghi.
+Restituisci SOLO il testo dell'email, senza oggetto.`;
 
     case 2:
-      return `Scrivi il follow-up #2 per ${lead.contact_name} di ${lead.company}. Non hanno risposto alla prima email.
+      return `Scrivi un secondo messaggio per ${lead.contact_name} di ${lead.company}. Non hanno risposto al primo.
 
 ${base}
 
-OBIETTIVO: far capire il vantaggio competitivo delle foto indossate sulle schede prodotto.
+Scrivi un'email breve che:
+1. NON dire "ti riscrivo" o "volevo fare follow-up"
+2. Spiega un vantaggio concreto: le schede prodotto con foto indossate vendono di piu' e generano meno resi rispetto alle foto su sfondo bianco
+3. Con MIA possono avere queste foto in pochi minuti partendo dalle foto che hanno gia'
+4. Possono provare gratis su app.miafashion.it
+5. Chiudi con: Federico, MIA - itsmia.it
 
-L'email deve:
-- NON iniziare con 'Volevo fare follow-up' o 'Ti riscrivo perche''
-- Aprire con un dato/fatto concreto (es: le schede con foto indossate convertono fino al 30% in piu' e generano meno resi)
-- Spiegare come MIA risolve questo: outfit multipli generati in automatico da foto flat
-- CTA: app.miafashion.it
-- Max 80 parole
-- Chiudi con: Federico, MIA - itsmia.it
-
-IMPORTANTE: Restituisci SOLO il corpo dell'email. NON includere oggetto.`;
+Max 60 parole. Tono naturale, come se scrivessi a un conoscente.
+Restituisci SOLO il testo dell'email, senza oggetto.`;
 
     case 3:
-      return `Scrivi la terza email per ${lead.contact_name} di ${lead.company}.
+      return `Scrivi un terzo messaggio per ${lead.contact_name} di ${lead.company}.
 
 ${base}
 
-OBIETTIVO: enfatizzare il risparmio di tempo e soldi rispetto agli shooting tradizionali.
+Scrivi un'email breve che:
+1. Parla del risparmio: uno shooting tradizionale costa migliaia di euro e richiede settimane tra organizzazione, fotografi, modelle, studio. Con MIA si fa tutto in pochi minuti e costa una frazione
+2. Possono provare gratis su app.miafashion.it per vedere come funziona
+3. Chiudi con: Federico, MIA - itsmia.it
 
-L'email deve:
-- Aprire con una domanda diretta (es: "Quanto spendi per uno shooting con modelli e fotografo?")
-- Spiegare il risparmio concreto: con MIA da settimane a minuti, costo ridotto del 90%
-- Menzionare che si possono creare contenuti digitali variati senza shooting fisici
-- CTA: prova gratis su app.miafashion.it
-- Max 80 parole
-- Chiudi con: Federico, MIA - itsmia.it
-
-IMPORTANTE: Restituisci SOLO il corpo dell'email. NON includere oggetto.`;
+Max 60 parole. Tono diretto e amichevole.
+Restituisci SOLO il testo dell'email, senza oggetto.`;
 
     case 4:
-      return `Scrivi l'ultima email (breakup) per ${lead.contact_name} di ${lead.company}.
+      return `Scrivi un ultimo breve messaggio per ${lead.contact_name} di ${lead.company}.
 
 ${base}
 
-OBIETTIVO: email breve di chiusura, lasciare la porta aperta.
+Scrivi 2-3 righe massimo:
+1. Dì che non vuoi disturbare ulteriormente
+2. Ricorda solo che MIA permette di creare foto con modelli virtuali per e-commerce di moda
+3. Lasciagli il link app.miafashion.it se in futuro vogliono provare
+4. Chiudi con: Federico, MIA - itsmia.it
 
-L'email deve:
-- Molto breve e diretta (3-4 righe max)
-- Riassumere in una frase cosa fa MIA per e-commerce moda
-- Lasciare il link per quando vorranno provare
-- CTA: app.miafashion.it
-- Max 50 parole
-- Chiudi con: Federico, MIA - itsmia.it
-
-IMPORTANTE: Restituisci SOLO il corpo dell'email. NON includere oggetto.`;
+Max 40 parole. Brevissimo e naturale.
+Restituisci SOLO il testo dell'email, senza oggetto.`;
 
     default:
-      return `Scrivi un'email di outreach per ${lead.contact_name} di ${lead.company}.\n\n${base}\n\nMax 80 parole. Restituisci SOLO il testo.`;
+      return `Scrivi un'email semplice per ${lead.contact_name} di ${lead.company}.\n\n${base}\n\nSpiega cosa fa MIA e che possono provarlo gratis su app.miafashion.it. Max 60 parole. Restituisci SOLO il testo.`;
   }
 }
 
@@ -349,17 +315,17 @@ export async function generateEmailSubjects(lead, emailNumber) {
 
   const language = getLanguage(lead.country);
 
-  const prompt = `Genera 2 varianti di oggetto email per ${lead.contact_name} di ${lead.company} (${lead.product_category}).
+  const prompt = `Genera 2 oggetti email per ${lead.contact_name} di ${lead.company}.
 
-Contesto: l'email presenta MIA, piattaforma che genera foto prodotto indossate per e-commerce moda.
+L'email parla di MIA, un'app per creare foto con modelli virtuali per e-commerce di moda.
 
 Regole:
-- Max 50 caratteri per oggetto
-- Variante A: diretta e concreta (es: "Foto indossate per ${lead.company} senza shooting")
-- Variante B: domanda o curiosita' (es: "Shooting in 5 minuti?")
-- NO emoji, NO clickbait, NO ALL CAPS, NO punti esclamativi
+- Max 45 caratteri per oggetto
+- Variante A: semplice e diretta (es: "Foto prodotto per ${lead.company}")
+- Variante B: domanda breve (es: "Foto indossate senza shooting?")
+- Devono sembrare oggetti scritti da una persona, non da un software
+- NO emoji, NO maiuscole, NO punti esclamativi
 - Lingua: ${language}
-- NON usare "innovativo", "rivoluzionario", "game-changer"
 
 Restituisci SOLO un JSON: {"variant_a": "...", "variant_b": "..."}`;
 
