@@ -657,7 +657,7 @@ export async function findEmailsViaApollo(leads) {
         if (!enrichResp.ok) {
           const errText = await enrichResp.text().catch(() => '');
           dbg.step = 'enrich_http_error';
-          dbg.detail = `HTTP ${enrichResp.status}: ${errText.slice(0, 200)} | person=${personName} id=${personId}`;
+          dbg.detail = `HTTP ${enrichResp.status}: ${errText.slice(0, 200)}`;
           debug.push(dbg);
           return;
         }
@@ -681,7 +681,8 @@ export async function findEmailsViaApollo(leads) {
           dbg.detail = `${person.email} (${person.title || 'n/a'}) [${person.email_status || '?'}]`;
         } else {
           dbg.step = 'enrich_no_email';
-          dbg.detail = `persona enriched ma email=null | person=${personName} id=${personId} | keys=${person ? Object.keys(person).join(',') : 'null'}`;
+          const pName = person ? `${person.first_name || ''} ${person.last_name || ''}`.trim() : 'null';
+          dbg.detail = `persona enriched ma email=null | person=${pName} | keys=${person ? Object.keys(person).slice(0, 10).join(',') : 'null'}`;
         }
         debug.push(dbg);
       } catch (err) {
