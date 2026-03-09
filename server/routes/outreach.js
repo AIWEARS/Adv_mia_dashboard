@@ -18,7 +18,7 @@ import {
   isOutreachGeminiAvailable, qualifyLeadBatch,
   generateOutreachEmail, generateEmailSubjects
 } from '../services/outreachGeminiService.js';
-import { discoverLeads, findEmailsViaApollo } from '../services/leadDiscoveryService.js';
+import { discoverLeads, findEmailsViaHunter } from '../services/leadDiscoveryService.js';
 import { isEmailConfigured, verifySmtp, sendBatch } from '../services/emailSendService.js';
 
 // waitUntil per mantenere vivi i job in background su Vercel serverless
@@ -308,11 +308,11 @@ router.post('/find-emails', async (req, res) => {
       return res.json({ status: 'completed', found: 0, total: 0, message: 'Tutti i lead hanno gia\' un\'email.' });
     }
 
-    const result = await findEmailsViaApollo(leadsNoEmail);
+    const result = await findEmailsViaHunter(leadsNoEmail);
 
     // Salva le email trovate nello store
     for (const lead of leadsNoEmail) {
-      if (lead.contact_email && lead.enrichment_data?.email_source === 'apollo_people') {
+      if (lead.contact_email && (lead.enrichment_data?.email_source === 'hunter' || lead.enrichment_data?.email_source === 'apollo_people')) {
         updateLead(lead.id, {
           contact_email: lead.contact_email,
           contact_name: lead.contact_name,
@@ -329,7 +329,7 @@ router.post('/find-emails', async (req, res) => {
       total: result.total,
       creditsUsed: result.creditsUsed || 0,
       debug: result.debug || [],
-      leads: leadsNoEmail.filter(l => l.enrichment_data?.email_source === 'apollo_people' || l.enrichment_data?.email_source === 'apollo_search')
+      leads: leadsNoEmail.filter(l => l.enrichment_data?.email_source === 'hunter' || l.enrichment_data?.email_source === 'apollo_people')
         .map(l => ({ id: l.id, contact_email: l.contact_email, contact_name: l.contact_name, contact_title: l.contact_title }))
     });
   } catch (err) {

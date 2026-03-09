@@ -596,20 +596,21 @@ Criteri FONDAMENTALI - MIA e' per PICCOLI/MEDI brand, NON per grandi aziende fam
 }
 
 // ============================================================
-// APOLLO ENRICHMENT — trova email contatti nelle aziende
-// Usa direttamente /people/match con dominio (1 credito per lead).
-// Il People Search e' bloccato sul piano Free di Apollo.
+// HUNTER.IO DOMAIN SEARCH — trova email contatti nelle aziende
+// GET /v2/domain-search?domain=example.com → tutte le email del dominio
+// Piano Free: 25 ricerche/mese (1 credito per dominio cercato)
 // ============================================================
 
-export async function findEmailsViaApollo(leads) {
-  if (!APOLLO_API_KEY) {
-    console.warn('[Discovery] APOLLO_API_KEY mancante — skip email lookup');
-    return { found: 0, total: 0, warning: 'APOLLO_API_KEY non configurata' };
+const HUNTER_API_KEY = process.env.HUNTER_API_KEY || '';
+
+export async function findEmailsViaHunter(leads) {
+  if (!HUNTER_API_KEY) {
+    console.warn('[Discovery] HUNTER_API_KEY mancante — skip email lookup');
+    return { found: 0, total: 0, warning: 'HUNTER_API_KEY non configurata' };
   }
 
   const leadsWithoutEmail = leads.filter(l => {
     const email = l.contact_email || '';
-    // Salta se ha gia' una email reale (non generata info@)
     return !email || l.enrichment_data?.email_source === 'generated';
   });
 
@@ -617,89 +618,89 @@ export async function findEmailsViaApollo(leads) {
     return { found: 0, total: 0, debug: [] };
   }
 
-  console.log(`[Discovery] Apollo email lookup: ${leadsWithoutEmail.length} lead senza email`);
+  console.log(`[Hunter] Email lookup: ${leadsWithoutEmail.length} lead senza email`);
   let found = 0;
   let creditsUsed = 0;
-  const debug = []; // Debug info per frontend
+  const debug = [];
 
-  // Batch di 3 (una sola chiamata per lead)
-  const BATCH = 3;
-  for (let i = 0; i < leadsWithoutEmail.length; i += BATCH) {
-    const batch = leadsWithoutEmail.slice(i, i + BATCH);
-
-    await Promise.all(batch.map(async (lead) => {
-      const dbg = { domain: '', step: '', detail: '' };
+  // Sequenziale per rispettare rate limits Hunter (free = lento)
+  for (const lead of leadsWithoutEmail) {
+    const dbg = { domain: '', step: '', detail: '' };
+    try {
+      let domain = '';
       try {
-        let domain = '';
-        try {
-          domain = new URL(lead.website.startsWith('http') ? lead.website : `https://${lead.website}`).hostname.replace('www.', '');
-        } catch { dbg.step = 'url_parse_fail'; debug.push(dbg); return; }
-        dbg.domain = domain;
+        domain = new URL(lead.website.startsWith('http') ? lead.website : `https://${lead.website}`).hostname.replace('www.', '');
+      } catch { dbg.step = 'url_parse_fail'; debug.push(dbg); continue; }
+      dbg.domain = domain;
 
-        // --- Enrichment diretto con dominio (1 credito) ---
-        // Saltiamo People Search (bloccato su piano Free).
-        // /people/match con solo domain trova il contatto piu' rilevante.
-        const enrichBody = {
-          organization_name: lead.company || '',
-          domain: domain,
-          reveal_personal_emails: true
-        };
+      // --- Hunter Domain Search (1 credito per dominio) ---
+      const url = `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(domain)}&api_key=${HUNTER_API_KEY}&limit=5`;
+      const resp = await fetch(url);
 
-        const enrichResp = await fetch('https://api.apollo.io/api/v1/people/match', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Key': APOLLO_API_KEY
-          },
-          body: JSON.stringify(enrichBody)
-        });
-
-        if (!enrichResp.ok) {
-          const errText = await enrichResp.text().catch(() => '');
-          dbg.step = 'enrich_http_error';
-          dbg.detail = `HTTP ${enrichResp.status}: ${errText.slice(0, 200)}`;
-          debug.push(dbg);
-          return;
-        }
-
-        const enrichData = await enrichResp.json();
-        const person = enrichData.person;
-        creditsUsed++;
-
-        if (person && person.email) {
-          lead.contact_email = person.email;
-          lead.contact_name = [person.first_name, person.last_name].filter(Boolean).join(' ') || lead.contact_name;
-          lead.contact_title = person.title || lead.contact_title || '';
-          lead.enrichment_data = {
-            ...lead.enrichment_data,
-            email_source: 'apollo_people',
-            email_status: person.email_status || '',
-            linkedin_url: person.linkedin_url || lead.enrichment_data?.linkedin_url || ''
-          };
-          found++;
-          dbg.step = 'enrich_ok';
-          dbg.detail = `${person.email} (${person.title || 'n/a'}) [${person.email_status || '?'}]`;
-        } else {
-          dbg.step = 'enrich_no_email';
-          const pName = person ? `${person.first_name || ''} ${person.last_name || ''}`.trim() : 'null';
-          dbg.detail = `persona enriched ma email=null | person=${pName} | keys=${person ? Object.keys(person).slice(0, 10).join(',') : 'null'}`;
-        }
+      if (!resp.ok) {
+        const errBody = await resp.text().catch(() => '');
+        dbg.step = 'hunter_http_error';
+        dbg.detail = `HTTP ${resp.status}: ${errBody.slice(0, 200)}`;
         debug.push(dbg);
-      } catch (err) {
-        dbg.step = 'exception';
-        dbg.detail = err.message;
-        debug.push(dbg);
+        continue;
       }
-    }));
 
-    // Rate limit Apollo
-    if (i + BATCH < leadsWithoutEmail.length) {
-      await new Promise(r => setTimeout(r, 500));
+      const data = await resp.json();
+      const emails = data.data?.emails || [];
+      creditsUsed++;
+
+      if (emails.length === 0) {
+        dbg.step = 'hunter_no_emails';
+        dbg.detail = `0 email trovate per ${domain}`;
+        debug.push(dbg);
+        continue;
+      }
+
+      // Priorita': founder/ceo > marketing/ecommerce > chiunque (con confidence alta)
+      const ranked = [
+        ...emails.filter(e => e.value && /founder|ceo|owner|titolare|co-founder/i.test(e.position || '')),
+        ...emails.filter(e => e.value && /marketing|ecommerce|e-commerce|digital|direttore/i.test(e.position || '')),
+        ...emails.filter(e => e.value && e.confidence > 50),
+        ...emails.filter(e => e.value)
+      ];
+
+      // Deduplica
+      const seen = new Set();
+      const unique = ranked.filter(e => {
+        if (seen.has(e.value)) return false;
+        seen.add(e.value);
+        return true;
+      });
+
+      if (unique.length > 0) {
+        const best = unique[0];
+        lead.contact_email = best.value;
+        const fullName = [best.first_name, best.last_name].filter(Boolean).join(' ');
+        lead.contact_name = fullName || lead.contact_name;
+        lead.contact_title = best.position || lead.contact_title || '';
+        lead.enrichment_data = {
+          ...lead.enrichment_data,
+          email_source: 'hunter',
+          email_confidence: best.confidence || 0,
+          linkedin_url: best.linkedin || lead.enrichment_data?.linkedin_url || ''
+        };
+        found++;
+        dbg.step = 'hunter_ok';
+        dbg.detail = `${best.value} (${best.position || 'n/a'}) [confidence: ${best.confidence || '?'}%]`;
+      }
+
+      debug.push(dbg);
+    } catch (err) {
+      dbg.step = 'exception';
+      dbg.detail = err.message;
+      debug.push(dbg);
     }
+
+    // Rate limit: 1 req ogni 500ms
+    await new Promise(r => setTimeout(r, 500));
   }
 
-  console.log(`[Discovery] Apollo email lookup: trovate ${found}/${leadsWithoutEmail.length} email (${creditsUsed} crediti usati)`);
-  console.log(`[Discovery] Apollo debug:`, JSON.stringify(debug, null, 2));
+  console.log(`[Hunter] Email lookup: trovate ${found}/${leadsWithoutEmail.length} email (${creditsUsed} crediti usati)`);
   return { found, total: leadsWithoutEmail.length, creditsUsed, debug };
 }
 
@@ -815,7 +816,7 @@ export async function discoverLeads(params) {
     if (leadsNoEmail.length > 0) {
       // Limita a max 15 lookup per non sforare il timeout
       const maxLookup = Math.min(leadsNoEmail.length, 15);
-      const lookupResult = await findEmailsViaApollo(leadsNoEmail.slice(0, maxLookup));
+      const lookupResult = await findEmailsViaHunter(leadsNoEmail.slice(0, maxLookup));
       console.log(`[Discovery] Apollo email: ${lookupResult.found} trovate, ${timeLeft()}ms rimanenti`);
     }
   } else {
