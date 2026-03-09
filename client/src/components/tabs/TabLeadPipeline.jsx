@@ -116,7 +116,11 @@ function TabLeadPipeline({ isActive }) {
       let filtered = [...allLeadsCache.current];
       if (filters.status) {
         const statusGroups = {
+          new: ['new', 'enriched'],
+          qualified: ['qualified'],
+          email_ready: ['email_ready'],
           contacted: ['contacted', 'sent', 'exported', 'replied', 'converted'],
+          disqualified: ['disqualified'],
         };
         const matchStatuses = statusGroups[filters.status] || [filters.status];
         filtered = filtered.filter(l => matchStatuses.includes(l.status));

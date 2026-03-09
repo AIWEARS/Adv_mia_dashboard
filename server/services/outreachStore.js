@@ -69,7 +69,12 @@ export function getLeads(filters = {}) {
   let result = [...store.leads];
 
   if (filters.status) {
-    result = result.filter(l => l.status === filters.status);
+    const statusGroups = {
+      new: ['new', 'enriched'],
+      contacted: ['contacted', 'sent', 'exported', 'replied', 'converted'],
+    };
+    const matchStatuses = statusGroups[filters.status] || [filters.status];
+    result = result.filter(l => matchStatuses.includes(l.status));
   }
   if (filters.campaign) {
     result = result.filter(l => l.campaign_id === filters.campaign);
