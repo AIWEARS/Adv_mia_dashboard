@@ -444,20 +444,19 @@ function TabCampagneOutreach({ isActive }) {
     setSaving(true);
     setSaveMsg('');
     try {
-      await updateOutreachLead(expandedLeadId, editDraft);
       // Aggiorna state locale
       setCampaignLeads(prev => prev.map(l =>
         l.id === expandedLeadId ? { ...l, ...editDraft } : l
       ));
-      // Aggiorna localStorage
-      try {
-        const cached = JSON.parse(localStorage.getItem('mia_discovered_leads') || '[]');
-        const idx = cached.findIndex(c => c.id === expandedLeadId);
-        if (idx >= 0) {
-          cached[idx] = { ...cached[idx], ...editDraft };
-          localStorage.setItem('mia_discovered_leads', JSON.stringify(cached));
-        }
-      } catch {}
+      // Salva in localStorage (source of truth per Vercel stateless)
+      const cached = JSON.parse(localStorage.getItem('mia_discovered_leads') || '[]');
+      const idx = cached.findIndex(c => c.id === expandedLeadId);
+      if (idx >= 0) {
+        cached[idx] = { ...cached[idx], ...editDraft };
+        localStorage.setItem('mia_discovered_leads', JSON.stringify(cached));
+      }
+      // Best-effort: prova anche server (potrebbe fallire su Vercel cold start)
+      try { await updateOutreachLead(expandedLeadId, editDraft); } catch {}
       setSaveMsg('Salvato!');
       setTimeout(() => setSaveMsg(''), 3000);
     } catch (err) {
