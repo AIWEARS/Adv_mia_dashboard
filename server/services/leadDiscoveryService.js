@@ -596,9 +596,9 @@ Criteri FONDAMENTALI - MIA e' per PICCOLI/MEDI brand, NON per grandi aziende fam
 }
 
 // ============================================================
-// APOLLO PEOPLE SEARCH + ENRICHMENT — trova email contatti
-// Step 1: Search persone per dominio (gratis, no crediti)
-// Step 2: Enrich/Reveal email via /people/match (1 credito)
+// APOLLO ENRICHMENT — trova email contatti nelle aziende
+// Usa direttamente /people/match con dominio (1 credito per lead).
+// Il People Search e' bloccato sul piano Free di Apollo.
 // ============================================================
 
 export async function findEmailsViaApollo(leads) {
@@ -622,8 +622,8 @@ export async function findEmailsViaApollo(leads) {
   let creditsUsed = 0;
   const debug = []; // Debug info per frontend
 
-  // Batch di 2 (ogni lead fa 2 chiamate: search + enrich)
-  const BATCH = 2;
+  // Batch di 3 (una sola chiamata per lead)
+  const BATCH = 3;
   for (let i = 0; i < leadsWithoutEmail.length; i += BATCH) {
     const batch = leadsWithoutEmail.slice(i, i + BATCH);
 
@@ -636,74 +636,14 @@ export async function findEmailsViaApollo(leads) {
         } catch { dbg.step = 'url_parse_fail'; debug.push(dbg); return; }
         dbg.domain = domain;
 
-        // --- STEP 1: Search persone per dominio (gratis) ---
-        const searchResp = await fetch('https://api.apollo.io/v1/mixed_people/search', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Key': APOLLO_API_KEY
-          },
-          body: JSON.stringify({
-            q_organization_domains: domain,
-            per_page: 10
-          })
-        });
-
-        if (!searchResp.ok) {
-          const errBody = await searchResp.text().catch(() => '');
-          dbg.step = 'search_http_error';
-          dbg.detail = `HTTP ${searchResp.status}: ${errBody.slice(0, 200)}`;
-          debug.push(dbg);
-          return;
-        }
-
-        const searchData = await searchResp.json();
-        const people = searchData.people || [];
-
-        if (people.length === 0) {
-          dbg.step = 'search_no_people';
-          dbg.detail = `0 persone trovate per ${domain}`;
-          debug.push(dbg);
-          return;
-        }
-
-        // Priorita' per ruolo: founder/ceo > marketing > chiunque
-        const best = people.find(p => /founder|ceo|owner|titolare|co-founder/i.test(p.title || ''))
-          || people.find(p => /marketing|ecommerce|e-commerce|digital|direttore/i.test(p.title || ''))
-          || people[0];
-
-        if (!best) {
-          dbg.step = 'search_no_match';
-          dbg.detail = `${people.length} persone ma nessun match`;
-          debug.push(dbg);
-          return;
-        }
-
-        const personName = `${best.first_name || ''} ${best.last_name || ''}`.trim();
-        const personId = best.id || '';
-
-        // Se il search gia' ha l'email (raro ma possibile)
-        if (best.email) {
-          lead.contact_email = best.email;
-          lead.contact_name = personName || lead.contact_name;
-          lead.contact_title = best.title || lead.contact_title || '';
-          lead.enrichment_data = {
-            ...lead.enrichment_data,
-            email_source: 'apollo_search',
-            linkedin_url: best.linkedin_url || ''
-          };
-          found++;
-          dbg.step = 'search_had_email';
-          dbg.detail = `${best.email} (${best.title || 'n/a'})`;
-          debug.push(dbg);
-          return;
-        }
-
-        // --- STEP 2: Enrich/Reveal email (1 credito) ---
-        // Prova con ID se disponibile, altrimenti con nome+dominio
-        const enrichBody = personId
-          ? { id: personId, reveal_personal_emails: true }
-          : { first_name: best.first_name, last_name: best.last_name, domain, reveal_personal_emails: true };
+        // --- Enrichment diretto con dominio (1 credito) ---
+        // Saltiamo People Search (bloccato su piano Free).
+        // /people/match con solo domain trova il contatto piu' rilevante.
+        const enrichBody = {
+          organization_name: lead.company || '',
+          domain: domain,
+          reveal_personal_emails: true
+        };
 
         const enrichResp = await fetch('https://api.apollo.io/api/v1/people/match', {
           method: 'POST',
