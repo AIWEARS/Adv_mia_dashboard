@@ -596,7 +596,9 @@ Criteri FONDAMENTALI - MIA e' per PICCOLI/MEDI brand, NON per grandi aziende fam
 }
 
 // ============================================================
-// APOLLO PEOPLE SEARCH — trova email contatti nelle aziende
+// APOLLO PEOPLE SEARCH + ENRICHMENT — trova email contatti
+// Step 1: Search persone per dominio (gratis, no crediti)
+// Step 2: Enrich/Reveal email via /people/match (1 credito)
 // ============================================================
 
 export async function findEmailsViaApollo(leads) {
@@ -617,9 +619,10 @@ export async function findEmailsViaApollo(leads) {
 
   console.log(`[Discovery] Apollo email lookup: ${leadsWithoutEmail.length} lead senza email`);
   let found = 0;
+  let creditsUsed = 0;
 
-  // Batch di 3 per rispettare rate limits Apollo
-  const BATCH = 3;
+  // Batch di 2 (ogni lead fa 2 chiamate: search + enrich)
+  const BATCH = 2;
   for (let i = 0; i < leadsWithoutEmail.length; i += BATCH) {
     const batch = leadsWithoutEmail.slice(i, i + BATCH);
 
@@ -630,7 +633,8 @@ export async function findEmailsViaApollo(leads) {
           domain = new URL(lead.website.startsWith('http') ? lead.website : `https://${lead.website}`).hostname.replace('www.', '');
         } catch { return; }
 
-        const response = await fetch('https://api.apollo.io/v1/mixed_people/search', {
+        // --- STEP 1: Search persone per dominio (gratis) ---
+        const searchResp = await fetch('https://api.apollo.io/v1/mixed_people/search', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -645,46 +649,82 @@ export async function findEmailsViaApollo(leads) {
           })
         });
 
-        if (!response.ok) {
-          console.warn(`[Discovery] Apollo people ${domain}: HTTP ${response.status}`);
+        if (!searchResp.ok) {
+          console.warn(`[Discovery] Apollo search ${domain}: HTTP ${searchResp.status}`);
           return;
         }
 
-        const data = await response.json();
-        const people = data.people || [];
+        const searchData = await searchResp.json();
+        const people = searchData.people || [];
 
-        if (people.length > 0) {
-          // Priorita': founder/ceo > marketing/ecommerce > chiunque con email
-          const best = people.find(p => p.email && /founder|ceo|owner|titolare|co-founder/i.test(p.title || ''))
-            || people.find(p => p.email && /marketing|ecommerce|e-commerce|digital|direttore/i.test(p.title || ''))
-            || people.find(p => p.email);
+        if (people.length === 0) {
+          console.log(`[Discovery] Apollo search: ${domain} — nessun contatto trovato`);
+          return;
+        }
 
-          if (best && best.email) {
-            lead.contact_email = best.email;
-            lead.contact_name = [best.first_name, best.last_name].filter(Boolean).join(' ') || lead.contact_name;
-            lead.contact_title = best.title || lead.contact_title || '';
-            lead.enrichment_data = {
-              ...lead.enrichment_data,
-              email_source: 'apollo_people',
-              linkedin_url: best.linkedin_url || lead.enrichment_data?.linkedin_url || ''
-            };
-            found++;
-            console.log(`[Discovery] Apollo: ${domain} → ${best.email} (${best.title || 'n/a'})`);
-          }
+        // Priorita' per ruolo: founder/ceo > marketing > chiunque
+        const best = people.find(p => /founder|ceo|owner|titolare|co-founder/i.test(p.title || ''))
+          || people.find(p => /marketing|ecommerce|e-commerce|digital|direttore/i.test(p.title || ''))
+          || people[0];
+
+        if (!best || !best.id) {
+          console.log(`[Discovery] Apollo search: ${domain} — persone trovate ma senza ID`);
+          return;
+        }
+
+        console.log(`[Discovery] Apollo search: ${domain} → ${best.first_name} ${best.last_name} (${best.title || 'n/a'}), revealing...`);
+
+        // --- STEP 2: Enrich/Reveal email (1 credito) ---
+        const enrichResp = await fetch('https://api.apollo.io/api/v1/people/match', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': APOLLO_API_KEY
+          },
+          body: JSON.stringify({
+            id: best.id,
+            reveal_personal_emails: true
+          })
+        });
+
+        if (!enrichResp.ok) {
+          const errText = await enrichResp.text().catch(() => '');
+          console.warn(`[Discovery] Apollo enrich ${domain}: HTTP ${enrichResp.status} ${errText}`);
+          return;
+        }
+
+        const enrichData = await enrichResp.json();
+        const person = enrichData.person;
+        creditsUsed++;
+
+        if (person && person.email) {
+          lead.contact_email = person.email;
+          lead.contact_name = [person.first_name, person.last_name].filter(Boolean).join(' ') || lead.contact_name;
+          lead.contact_title = person.title || lead.contact_title || '';
+          lead.enrichment_data = {
+            ...lead.enrichment_data,
+            email_source: 'apollo_people',
+            email_status: person.email_status || '',
+            linkedin_url: person.linkedin_url || lead.enrichment_data?.linkedin_url || ''
+          };
+          found++;
+          console.log(`[Discovery] Apollo reveal: ${domain} → ${person.email} (${person.title || 'n/a'}) [${person.email_status || '?'}]`);
+        } else {
+          console.log(`[Discovery] Apollo reveal: ${domain} — persona trovata ma email non disponibile`);
         }
       } catch (err) {
-        console.warn(`[Discovery] Apollo people lookup failed for ${lead.company}:`, err.message);
+        console.warn(`[Discovery] Apollo email lookup failed for ${lead.company}:`, err.message);
       }
     }));
 
-    // Rate limit Apollo
+    // Rate limit Apollo (2 chiamate per lead)
     if (i + BATCH < leadsWithoutEmail.length) {
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise(r => setTimeout(r, 500));
     }
   }
 
-  console.log(`[Discovery] Apollo email lookup: trovate ${found}/${leadsWithoutEmail.length} email`);
-  return { found, total: leadsWithoutEmail.length };
+  console.log(`[Discovery] Apollo email lookup: trovate ${found}/${leadsWithoutEmail.length} email (${creditsUsed} crediti usati)`);
+  return { found, total: leadsWithoutEmail.length, creditsUsed };
 }
 
 // ============================================================
