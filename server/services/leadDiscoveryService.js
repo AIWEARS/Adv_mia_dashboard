@@ -609,9 +609,14 @@ export async function findEmailsViaHunter(leads) {
     return { found: 0, total: 0, warning: 'HUNTER_API_KEY non configurata' };
   }
 
+  // Accetta lead senza email O con email generica (info@, contatto@, ecc.)
+  const GENERIC_PREFIXES = /^(info|contatto|contatti|contact|hello|ciao|support|supporto|help|admin|ufficio|office|commerciale|vendite|sales|ordini|orders|shop|store|press|media|hr|privacy|webmaster|noreply|no-reply)@/i;
   const leadsWithoutEmail = leads.filter(l => {
     const email = l.contact_email || '';
-    return !email || l.enrichment_data?.email_source === 'generated';
+    if (!email) return true;
+    if (l.enrichment_data?.email_source === 'generated') return true;
+    if (GENERIC_PREFIXES.test(email)) return true;
+    return false;
   });
 
   if (leadsWithoutEmail.length === 0) {

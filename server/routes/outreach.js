@@ -299,10 +299,18 @@ router.post('/find-emails', async (req, res) => {
       leadsToSearch = leadIds.map(id => getLead(id)).filter(Boolean);
     }
 
-    // Filtra solo quelli senza email (o con email generata info@)
-    const leadsNoEmail = leadsToSearch.filter(l =>
-      !l.contact_email || l.enrichment_data?.email_source === 'generated'
-    );
+    // Filtra lead che hanno bisogno di email personale:
+    // - Nessuna email
+    // - Email generica (info@, contatto@, hello@, ecc.)
+    // - Email source 'generated'
+    const GENERIC_PREFIXES = /^(info|contatto|contatti|contact|hello|ciao|support|supporto|help|admin|ufficio|office|commerciale|vendite|sales|ordini|orders|shop|store|press|media|hr|privacy|webmaster|noreply|no-reply)@/i;
+    const leadsNoEmail = leadsToSearch.filter(l => {
+      const email = l.contact_email || '';
+      if (!email) return true;
+      if (l.enrichment_data?.email_source === 'generated') return true;
+      if (GENERIC_PREFIXES.test(email)) return true;
+      return false;
+    });
 
     if (leadsNoEmail.length === 0) {
       return res.json({ status: 'completed', found: 0, total: 0, message: 'Tutti i lead hanno gia\' un\'email.' });
