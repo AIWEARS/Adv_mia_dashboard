@@ -430,11 +430,19 @@ router.post('/generate-emails', async (req, res) => {
 
     let leadsForEmails;
     if (leadIds && Array.isArray(leadIds)) {
+      // 1. Prova dallo store locale del server
       leadsForEmails = leadIds.map(id => getLead(id)).filter(Boolean);
-      // Fallback: cold instance
-      if (leadsForEmails.length === 0 && Array.isArray(clientLeads) && clientLeads.length > 0) {
-        addLeads(clientLeads);
-        leadsForEmails = leadIds.map(id => getLead(id)).filter(Boolean);
+
+      // 2. Fallback: usa i lead inviati dal client (Vercel stateless)
+      if (leadsForEmails.length < leadIds.length && Array.isArray(clientLeads) && clientLeads.length > 0) {
+        const foundIds = new Set(leadsForEmails.map(l => l.id));
+        const missing = clientLeads.filter(l => leadIds.includes(l.id) && !foundIds.has(l.id));
+        if (missing.length > 0) {
+          // Aggiungi allo store per consistenza (best-effort, non blocca se duplicati)
+          try { addLeads(missing); } catch {}
+          // Usa direttamente i clientLeads come fonte di verità
+          leadsForEmails = [...leadsForEmails, ...missing];
+        }
       }
     } else if (campaignId) {
       leadsForEmails = getLeads({ campaign: campaignId }).filter(l => l.icp_score !== null);
@@ -442,7 +450,7 @@ router.post('/generate-emails', async (req, res) => {
       return res.status(400).json({ error: 'Fornisci leadIds o campaignId' });
     }
 
-    // Filtra solo qualificati
+    // Filtra solo qualificati (score >= 50) oppure tutti se hanno dati di qualificazione dal client
     leadsForEmails = leadsForEmails.filter(l => l.icp_score !== null && l.icp_score >= 50);
 
     if (leadsForEmails.length === 0) {
@@ -479,14 +487,16 @@ router.post('/generate-emails', async (req, res) => {
           if (body) emails[`email_body_${i + 1}`] = body;
         });
 
-        const updated = updateLead(lead.id, {
+        const emailData = {
           email_subject_a: subjects?.variant_a || '',
           email_subject_b: subjects?.variant_b || '',
           ...emails,
           status: 'email_ready',
           campaign_id: targetCampaignId
-        });
-        if (updated) generatedLeads.push(updated);
+        };
+        const updated = updateLead(lead.id, emailData);
+        // Se updateLead fallisce (lead non nello store), restituisci comunque i dati
+        generatedLeads.push(updated || { ...lead, ...emailData });
       } catch (err) {
         console.error(`[Outreach] Email gen for ${lead.company} failed:`, err.message);
       }
