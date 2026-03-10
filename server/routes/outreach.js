@@ -258,17 +258,17 @@ router.delete('/campaigns/:id', (req, res) => {
 
 router.post('/discover', async (req, res) => {
   try {
-    const { query, country, category, limit = 25, sources = ['google'] } = req.body;
+    const { query, country, region, category, maxEmployees, limit = 25, sources = ['google'] } = req.body;
 
-    if (!query) {
-      return res.status(400).json({ error: 'Fornisci una query di ricerca' });
+    if (!query && !category) {
+      return res.status(400).json({ error: 'Fornisci una query o categoria di ricerca' });
     }
 
     const limitNum = Math.min(parseInt(limit) || 25, 100);
 
     // Esecuzione SINCRONA — tutto il lavoro avviene dentro la request HTTP
     // maxDuration=60s in vercel.json garantisce tempo sufficiente
-    const results = await discoverLeads({ query, country, category, limit: limitNum, sources });
+    const results = await discoverLeads({ query, country, region, category, maxEmployees: maxEmployees ? parseInt(maxEmployees) : null, limit: limitNum, sources });
 
     res.json({
       status: 'completed',

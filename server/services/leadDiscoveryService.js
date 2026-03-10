@@ -19,34 +19,59 @@ const COUNTRY_LABELS = {
 
 const CATEGORY_KEYWORDS = {
   fashion: 'fashion apparel clothing brand',
+  'fashion kids': 'kids children clothing brand bambini abbigliamento',
+  'fashion donna': 'women clothing brand donna abbigliamento femminile',
+  'fashion uomo': 'men clothing brand uomo abbigliamento maschile',
+  streetwear: 'streetwear urban clothing brand',
+  'sustainable fashion': 'sustainable ethical fashion brand moda sostenibile',
+  'luxury fashion': 'luxury designer fashion brand alta moda',
   beauty: 'beauty cosmetics skincare brand',
   luxury: 'luxury brand designer high-end',
   accessori: 'fashion accessories bags jewelry',
   calzature: 'shoes footwear sneakers brand',
-  sportswear: 'sportswear activewear athletic brand'
+  sportswear: 'sportswear activewear athletic brand',
+  intimo: 'underwear lingerie beachwear swimwear brand intimo'
 };
 
 // ============================================================
 // APOLLO.IO SEARCH
 // ============================================================
 
-async function searchApollo(query, country, category, limit) {
+async function searchApollo(query, country, category, limit, options = {}) {
   if (!APOLLO_API_KEY) {
     console.warn('[Discovery] APOLLO_API_KEY non configurata — skip Apollo search');
     return { leads: [], warning: 'APOLLO_API_KEY non configurata sul server' };
   }
 
+  const { region, maxEmployees } = options;
   const leads = [];
   const countryLabel = COUNTRY_LABELS[country] || country;
   const catKey = (category || 'fashion').toLowerCase();
   const categoryKw = CATEGORY_KEYWORDS[catKey] || category;
   const tags = [...new Set([...catKey.split(/\s+/), ...categoryKw.split(/\s+/)])].filter(t => t.length > 2);
 
+  // Location: paese + regione/citta se specificata
+  const locations = region ? [`${region}, ${countryLabel}`] : [countryLabel];
+
+  // Employee ranges basate su maxEmployees
+  let employeeRanges;
+  if (maxEmployees && maxEmployees <= 10) {
+    employeeRanges = ["1,10"];
+  } else if (maxEmployees && maxEmployees <= 20) {
+    employeeRanges = ["1,10", "11,20"];
+  } else if (maxEmployees && maxEmployees <= 50) {
+    employeeRanges = ["1,10", "11,20", "21,50"];
+  } else if (maxEmployees && maxEmployees <= 100) {
+    employeeRanges = ["1,10", "11,20", "21,50", "51,100"];
+  } else {
+    employeeRanges = ["1,10", "11,20", "21,50", "51,100", "101,200", "201,500"];
+  }
+
   const PER_PAGE = 25; // Max Apollo
   const maxPages = Math.min(Math.ceil(limit / PER_PAGE), 4); // Max 4 pagine (100 lead)
 
   try {
-    console.log(`[Discovery] Apollo search: tags=${JSON.stringify(tags)}, country="${countryLabel}", limit=${limit}, pages=${maxPages}`);
+    console.log(`[Discovery] Apollo search: tags=${JSON.stringify(tags)}, locations=${JSON.stringify(locations)}, employees=${JSON.stringify(employeeRanges)}, limit=${limit}`);
 
     for (let page = 1; page <= maxPages && leads.length < limit; page++) {
       const orgResponse = await fetch('https://api.apollo.io/v1/organizations/search', {
@@ -57,8 +82,8 @@ async function searchApollo(query, country, category, limit) {
         },
         body: JSON.stringify({
           q_organization_keyword_tags: tags,
-          organization_locations: [countryLabel],
-          organization_num_employees_ranges: ["1,10", "11,20", "21,50", "51,100", "101,200", "201,500"],
+          organization_locations: locations,
+          organization_num_employees_ranges: employeeRanges,
           per_page: PER_PAGE,
           page
         })
@@ -229,22 +254,24 @@ async function searchBrave(searchQuery, urls, countryCode, searchLang = 'en') {
 }
 
 // --- Orchestratore ricerca web ---
-async function searchGoogle(query, country, category, limit) {
+async function searchGoogle(query, country, category, limit, options = {}) {
+  const { region } = options;
   const leads = [];
   const countryLabel = COUNTRY_LABELS[country] || country;
   const catKey = (category || 'fashion').toLowerCase();
+  const regionStr = region ? ` ${region}` : '';
   const urls = new Set();
 
-  // Query localizzate (nella lingua del paese) — no query inglesi, focus locale
-  const localQueries = (LOCALIZED_QUERIES[country] || []).map(q => q.replace(/\{cat\}/g, catKey));
+  // Query localizzate (nella lingua del paese) — con regione se specificata
+  const localQueries = (LOCALIZED_QUERIES[country] || []).map(q => q.replace(/\{cat\}/g, catKey) + regionStr);
 
   // Fallback: se non ci sono query localizzate per il paese, usa inglese
   const allQueries = localQueries.length > 0
     ? localQueries
     : [
-        `${catKey} brand ${countryLabel} online shop`,
-        `small ${catKey} brand ${countryLabel} ecommerce store`,
-        `independent ${catKey} ${countryLabel} online boutique -luxury -outlet`
+        `${catKey} brand ${countryLabel}${regionStr} online shop`,
+        `small ${catKey} brand ${countryLabel}${regionStr} ecommerce store`,
+        `independent ${catKey} ${countryLabel}${regionStr} online boutique -luxury -outlet`
       ];
   const searchLang = SEARCH_LANG_MAP[country] || 'en';
 
@@ -715,7 +742,7 @@ export async function findEmailsViaHunter(leads) {
 // ============================================================
 
 export async function discoverLeads(params) {
-  const { query = 'fashion brand', country = 'IT', category = 'fashion', limit = 25, sources = ['apollo', 'google'] } = params;
+  const { query = 'fashion brand', country = 'IT', region = '', category = 'fashion', maxEmployees = null, limit = 25, sources = ['apollo', 'google'] } = params;
 
   const START = Date.now();
   const DEADLINE = 50000; // 50s hard deadline (Vercel max=60s, margine 10s)
@@ -730,10 +757,10 @@ export async function discoverLeads(params) {
 
   const searchPromises = [];
   if (sources.includes('apollo')) {
-    searchPromises.push(searchApollo(query, country, category, limit).then(r => ({ type: 'apollo', ...r })));
+    searchPromises.push(searchApollo(query, country, category, limit, { region, maxEmployees }).then(r => ({ type: 'apollo', ...r })));
   }
   if (sources.includes('google')) {
-    searchPromises.push(searchGoogle(query, country, category, limit).then(r => ({ type: 'brave', ...r })));
+    searchPromises.push(searchGoogle(query, country, category, limit, { region }).then(r => ({ type: 'brave', ...r })));
   }
 
   const searchResults = await Promise.all(searchPromises);
@@ -812,6 +839,14 @@ export async function discoverLeads(params) {
 
   allLeads = [...leadsToEnrich, ...leadsBasic];
   console.log(`[Discovery] Enrichment completato: ${enriched} arricchiti in ${elapsed()}ms`);
+
+  // Post-filter: maxEmployees (filtra lead con troppi dipendenti dopo enrichment)
+  if (maxEmployees) {
+    const before = allLeads.length;
+    allLeads = allLeads.filter(l => !l.estimated_employees || l.estimated_employees <= maxEmployees);
+    const removed = before - allLeads.length;
+    if (removed > 0) console.log(`[Discovery] maxEmployees filter: rimossi ${removed} lead con >${maxEmployees} dipendenti`);
+  }
 
   // Fase 2b: Apollo People Search — trova email per lead senza contatto
   if (timeLeft() > 15000) {

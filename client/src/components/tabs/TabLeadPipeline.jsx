@@ -50,9 +50,12 @@ function TabLeadPipeline({ isActive }) {
   const [importMsg, setImportMsg] = useState('');
   const [showDiscover, setShowDiscover] = useState(false);
   const [discoverForm, setDiscoverForm] = useState({
-    query: 'fashion brand ecommerce',
+    query: '',
     country: 'IT',
+    region: '',
     category: 'fashion',
+    subcategory: '',
+    maxEmployees: '',
     limit: 25,
     sources: ['google', 'apollo']
   });
@@ -209,6 +212,15 @@ function TabLeadPipeline({ isActive }) {
   const handleDiscover = async () => {
     setShowDiscover(false);
 
+    // Costruisci query intelligente dai campi del form
+    const queryParts = [];
+    const cat = discoverForm.subcategory || discoverForm.category || 'fashion';
+    queryParts.push(cat);
+    if (discoverForm.region) queryParts.push(discoverForm.region);
+    queryParts.push('ecommerce');
+    if (discoverForm.query) queryParts.push(discoverForm.query);
+    const builtQuery = queryParts.join(' ');
+
     // Simula progresso con fasi animate (la chiamata è sincrona, max 60s)
     const phases = [
       { phase: 'searching', label: 'Ricerca lead in corso...', pct: 15 },
@@ -237,7 +249,10 @@ function TabLeadPipeline({ isActive }) {
     }, phaseInterval);
 
     try {
-      const result = await discoverOutreachLeads(discoverForm);
+      const result = await discoverOutreachLeads({
+        ...discoverForm,
+        query: builtQuery,
+      });
       clearInterval(progressTimer);
 
       const results = result.results || result;
@@ -788,7 +803,9 @@ function TabLeadPipeline({ isActive }) {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+
+          {/* Riga 1: Paese, Regione/Citta, Categoria */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Paese</label>
               <select
@@ -807,17 +824,52 @@ function TabLeadPipeline({ isActive }) {
               </select>
             </div>
             <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Regione / Città (opzionale)</label>
+              <input
+                type="text"
+                value={discoverForm.region}
+                onChange={(e) => setDiscoverForm(f => ({ ...f, region: e.target.value }))}
+                placeholder="es. Veneto, Milano, Toscana..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              />
+            </div>
+            <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Categoria</label>
               <select
                 value={discoverForm.category}
-                onChange={(e) => setDiscoverForm(f => ({ ...f, category: e.target.value }))}
+                onChange={(e) => setDiscoverForm(f => ({ ...f, category: e.target.value, subcategory: '' }))}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
-                <option value="fashion">Fashion</option>
-                <option value="beauty">Beauty</option>
+                <option value="fashion">Abbigliamento</option>
+                <option value="fashion kids">Abbigliamento Kids</option>
+                <option value="fashion donna">Abbigliamento Donna</option>
+                <option value="fashion uomo">Abbigliamento Uomo</option>
+                <option value="streetwear">Streetwear</option>
+                <option value="sustainable fashion">Moda Sostenibile</option>
+                <option value="luxury fashion">Luxury / Designer</option>
+                <option value="beauty">Beauty / Cosmesi</option>
                 <option value="accessori">Accessori</option>
                 <option value="calzature">Calzature</option>
                 <option value="sportswear">Sportswear</option>
+                <option value="intimo">Intimo / Beachwear</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Riga 2: Dipendenti, Quanti lead, Ricerca libera */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Max dipendenti</label>
+              <select
+                value={discoverForm.maxEmployees}
+                onChange={(e) => setDiscoverForm(f => ({ ...f, maxEmployees: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              >
+                <option value="">Tutti</option>
+                <option value="10">Max 10</option>
+                <option value="20">Max 20</option>
+                <option value="50">Max 50</option>
+                <option value="100">Max 100</option>
               </select>
             </div>
             <div>
@@ -832,10 +884,21 @@ function TabLeadPipeline({ isActive }) {
                 <option value={50}>50 lead</option>
               </select>
             </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Parole chiave extra (opzionale)</label>
+              <input
+                type="text"
+                value={discoverForm.query}
+                onChange={(e) => setDiscoverForm(f => ({ ...f, query: e.target.value }))}
+                placeholder="es. negozio, boutique, brand emergente..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              />
+            </div>
           </div>
+
           <div className="flex items-center justify-between">
             <p className="text-xs text-slate-400">
-              Cerca brand su web, arricchisce i dati e filtra con AI solo quelli in target per MIA.
+              Cerca brand su web e Apollo, arricchisce i dati e filtra con AI.
             </p>
             <button
               onClick={handleDiscover}
