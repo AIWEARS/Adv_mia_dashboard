@@ -450,11 +450,8 @@ router.post('/generate-emails', async (req, res) => {
       return res.status(400).json({ error: 'Fornisci leadIds o campaignId' });
     }
 
-    // Filtra solo qualificati (score >= 50) oppure tutti se hanno dati di qualificazione dal client
-    leadsForEmails = leadsForEmails.filter(l => l.icp_score !== null && l.icp_score >= 50);
-
     if (leadsForEmails.length === 0) {
-      return res.status(400).json({ error: 'Nessun lead qualificato per generare email. Esegui prima "Qualifica AI".' });
+      return res.status(400).json({ error: 'Nessun lead trovato per generare email.' });
     }
 
     // Auto-crea campagna se non fornita — collega i lead automaticamente

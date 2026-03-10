@@ -397,21 +397,12 @@ function TabLeadPipeline({ isActive }) {
       const cached = cachedAll.find(l => l.id === id);
       const inPage = leads.find(l => l.id === id);
       const lead = cached || inPage;
-      return lead && lead.icp_score >= 50 && !lead.email_body_1; // solo qualificati (score >= 50) senza email
+      return lead && !lead.email_body_1; // solo quelli senza email
     });
 
     if (idsToProcess.length === 0) {
-      const hasUnqualified = selectedIds.some(id => {
-        const cached = cachedAll.find(l => l.id === id);
-        const inPage = leads.find(l => l.id === id);
-        const lead = cached || inPage;
-        return lead && (!lead.icp_score || lead.icp_score < 50);
-      });
-      const msg = hasUnqualified
-        ? ' Alcuni lead selezionati non sono qualificati (score < 50). Qualificali prima con "Qualifica AI".'
-        : ' Tutti i lead selezionati hanno già le email.';
       setActiveJob({ type: 'generate-emails', status: 'completed', progress: 100, total: 100,
-        results: { generated: 0 }, campaignInfo: msg });
+        results: { generated: 0 }, campaignInfo: ' Tutti i lead selezionati hanno già le email.' });
       setTimeout(() => setActiveJob(null), 4000);
       return;
     }
@@ -733,15 +724,7 @@ function TabLeadPipeline({ isActive }) {
                     const cachedSelected = allLeadsCache.current.filter(l => selectedIds.includes(l.id));
                     const pageSelected = leads.filter(l => selectedIds.includes(l.id));
                     const allSelected = cachedSelected.length > 0 ? cachedSelected : pageSelected;
-                    const needsQualify = allSelected.some(l => !l.icp_score || l.icp_score < 50);
-                    const needsEmail = allSelected.some(l => l.icp_score >= 50 && !l.email_body_1);
-                    if (needsQualify) {
-                      handleQualify();
-                    } else if (needsEmail) {
-                      handleGenerateEmails();
-                    } else {
-                      handleGenerateEmails();
-                    }
+                    handleGenerateEmails();
                   }}
                   disabled={!!activeJob?.status && activeJob.status === 'processing'}
                   className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-mia-blue text-white hover:bg-mia-blue/90 transition-smooth disabled:opacity-50"
