@@ -238,6 +238,8 @@ NON suggerire brand di moda su misura - MIA NON vende vestiti, vende un servizio
 
 COMPETITOR OBBLIGATORI DA INCLUDERE:
 - Aiora Studio (aiorastudio.com) - competitor diretto, DEVE essere analizzato
+- MakeIt Real (makeit-real.com) - competitor diretto, DEVE essere analizzato
+- Genera Space (generaspace.ai) - competitor diretto, DEVE essere analizzato
 
 Cerca anche altri competitor come: piattaforme che generano foto di modelle con AI per cataloghi e-commerce, virtual photography, AI model generation tools.
 
