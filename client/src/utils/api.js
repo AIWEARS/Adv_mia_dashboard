@@ -88,6 +88,13 @@ export async function getCompetitors() {
 }
 
 /**
+ * Ottieni l'analisi social/adv approfondita di un competitor
+ */
+export async function getCompetitorSocialAnalysis(competitorId) {
+  return fetchApi(`/competitors/${competitorId}/social-analysis`);
+}
+
+/**
  * Ottieni lo stato di salute del tracciamento
  */
 export async function getTrackingHealth() {

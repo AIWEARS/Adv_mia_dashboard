@@ -511,6 +511,29 @@ export const competitorData = {
       comunicazione: 'Lusso accessibile, sogno, emozione. Puntano molto su Instagram con foto aspirazionali.',
       creativita: 'Foto editoriali con modelle. Ambientazioni lussuose. Zero copy tecnico, tutto emozione visiva.',
       score: 71
+    },
+    {
+      id: 'comp_4',
+      nome: 'Genera Space',
+      dominio: 'generaspace.ai',
+      descrizione: 'Piattaforma AI per la generazione di immagini moda. Sostituisce i servizi fotografici tradizionali con foto prodotto generate tramite intelligenza artificiale. Usata da oltre 115 brand globali.',
+      punti_forza: [
+        'Tecnologia AI proprietaria per replicare capi di abbigliamento',
+        'Riduzione drastica dei tempi (da 2 settimane a 10 minuti)',
+        'Costi molto inferiori rispetto ai servizi fotografici tradizionali',
+        'Output in qualita\' 6K con diritti commerciali completi',
+        'Elaborazione batch per grandi cataloghi (centinaia di SKU)'
+      ],
+      punti_deboli: [
+        'Necessita\' di caricare campioni fisici per generare le immagini',
+        'Personalizzazione limitata nei piani base',
+        'Sfondi personalizzati ancora "coming soon"',
+        'Nessun servizio di consulenza o sartoria reale',
+        'Prezzi in dollari (meno accessibile per PMI italiane)'
+      ],
+      comunicazione: 'Messaggi diretti focalizzati su ROI, velocita\' e scalabilita\'. Si posizionano come leader di innovazione con copertura stampa su Forbes e Vogue Business.',
+      creativita: 'Sito moderno e tech-oriented. Demo interattive con before/after. Copy data-driven: "1M+ outputs generated". Forte uso di social proof con loghi brand clienti.',
+      score: 74
     }
   ],
   cose_che_fanno_meglio: [
@@ -589,6 +612,46 @@ export const competitorData = {
       formato: 'Immagine con countdown visivo e bottone "Prenota ora"'
     }
   ]
+};
+
+// ---------- MOCK ANALISI SOCIAL/ADV COMPETITOR ----------
+export const competitorSocialMockData = {
+  comp_1: {
+    competitor: 'Lanieri',
+    meta_ads: {
+      attivo: true,
+      num_ads_stimato: '15-25',
+      formati_principali: ['Video 15-30s', 'Carosello prodotti', 'Immagine statica lifestyle'],
+      copy_esempi: [
+        'Il tuo abito, le tue regole. Scegli tessuto, stile e misure online. Consegna in 4 settimane.',
+        'Perche\' accontentarti del pronto? Con Lanieri crei il tuo abito su misura da casa.',
+        'Qualita\' artigianale italiana, comodita\' digitale. Scopri la collezione primavera.'
+      ],
+      cta_principali: ['Scopri di piu\'', 'Configura il tuo abito', 'Inizia ora'],
+      tone_of_voice: 'Elegante e aspirazionale, mix di tradizione artigianale e modernita\' digitale',
+      punti_chiave: ['Qualita\' italiana', 'Processo tutto online', 'Personalizzazione totale', 'Storytelling artigianale']
+    },
+    social_content: {
+      piattaforme_attive: ['Instagram', 'Facebook', 'LinkedIn', 'YouTube'],
+      frequenza_post: '4-6 post/settimana',
+      temi_ricorrenti: ['Behind the scenes sartoria', 'Testimonial clienti', 'Guide di stile', 'Lancio nuovi tessuti'],
+      hashtag_principali: ['#Lanieri', '#SuMisura', '#MadeInItaly', '#SartoDigitale'],
+      engagement_stimato: 'medio-alto',
+      formato_prevalente: 'Video lifestyle e caroselli prodotto'
+    },
+    messaging: {
+      usp_principale: 'Il sarto digitale: abiti su misura 100% online con qualita\' artigianale italiana',
+      angoli_comunicativi: ['Comodita\' dell\'online', 'Qualita\' Made in Italy', 'Personalizzazione totale', 'Heritage artigianale'],
+      target_percepito: 'Uomini professionisti 30-50 anni, attenti allo stile ma con poco tempo',
+      differenziazione_vs_mia: 'Lanieri vende abbigliamento su misura, MIA vende servizi AI di shooting fotografico. Non sono competitor diretti ma catturano keyword simili.'
+    },
+    valutazione_complessiva: 'Lanieri ha una comunicazione solida e coerente, con forte investimento in video content e storytelling artigianale. Il loro punto di forza e\' il brand positioning come "sarto digitale" che unisce tradizione e innovazione.',
+    suggerimenti_per_mia: [
+      'Studiare il loro uso dello storytelling video per applicarlo ai contenuti MIA',
+      'Differenziarsi nettamente posizionando MIA come tech/AI, non come sartoria',
+      'Usare un approccio simile di "behind the scenes" per mostrare la tecnologia AI in azione'
+    ]
+  }
 };
 
 // ---------- SALUTE TRACCIAMENTO ----------

@@ -34,6 +34,7 @@ const cache = new Map();
 const CACHE_TTL_DIAGNOSIS = 5 * 60 * 1000;     // 5 minuti
 const CACHE_TTL_ACTION_PLAN = 10 * 60 * 1000;  // 10 minuti
 const CACHE_TTL_COMPETITORS = 60 * 60 * 1000;  // 1 ora
+const CACHE_TTL_SOCIAL_ANALYSIS = 2 * 60 * 60 * 1000; // 2 ore
 
 function getCached(key) {
   const entry = cache.get(key);
@@ -503,4 +504,142 @@ RISPONDI con questo formato JSON:
     console.error('[GeminiService] MetricComments error:', error.message);
     return null;
   }
+}
+
+// ============================================================
+// ANALISI SOCIAL/ADV COMPETITOR
+// ============================================================
+
+export async function generateCompetitorSocialAnalysis(competitorName, competitorDomain) {
+  const cacheKey = `social_${competitorName.toLowerCase().replace(/\s+/g, '_')}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const ai = getClient();
+  if (!ai) return null;
+
+  const prompt = `Sei un analista di marketing digitale e social media specializzato nel settore AI, SaaS e fashion tech.
+
+Devi analizzare in profondita' la comunicazione social e advertising di: ${competitorName} (${competitorDomain})
+
+MIA (itsmia.it) e' il nostro brand - piattaforma AI italiana di shooting digitale per fashion e-commerce. Genera foto professionali di modelle con AI.
+
+CERCA SU GOOGLE informazioni reali su:
+1. Le ads attive di ${competitorName} su Meta (Facebook Ad Library), Google Ads
+2. I profili social di ${competitorName} (Instagram, LinkedIn, TikTok, X/Twitter)
+3. Il sito web ${competitorDomain} - messaggi chiave, landing page, copy
+4. Eventuali articoli, PR, case study pubblicati da ${competitorName}
+
+ANALIZZA IN DETTAGLIO:
+
+A) META ADS & ADVERTISING:
+- Sono attivi su Meta Ads? Quanti annunci stimati hanno?
+- Quali formati usano (video, carosello, immagine statica, stories)?
+- Esempi di copy che utilizzano (ricostruisci 2-3 esempi realistici basati sul loro stile)
+- CTA principali nei loro annunci
+- Tone of voice delle ads
+- Punti chiave della comunicazione pubblicitaria
+
+B) CONTENUTI SOCIAL:
+- Su quali piattaforme sono piu attivi?
+- Frequenza di pubblicazione stimata
+- Temi ricorrenti nei post (behind the scenes, testimonial, tutorial, prodotto, ecc.)
+- Hashtag principali utilizzati
+- Livello di engagement stimato
+- Formato prevalente dei contenuti
+
+C) MESSAGING E POSIZIONAMENTO:
+- Qual e' la loro USP (proposta di valore unica) comunicata?
+- Quali angoli comunicativi usano (velocita, prezzo, qualita, innovazione, ecc.)?
+- A chi si rivolgono (target percepito)?
+- Come si differenziano rispetto a MIA?
+
+RISPONDI IN ITALIANO con questo formato JSON esatto:
+{
+  "competitor": "${competitorName}",
+  "meta_ads": {
+    "attivo": true,
+    "num_ads_stimato": "range stimato es. 10-20",
+    "formati_principali": ["formato 1", "formato 2"],
+    "copy_esempi": ["esempio copy realistico 1", "esempio copy realistico 2", "esempio copy realistico 3"],
+    "cta_principali": ["CTA 1", "CTA 2"],
+    "tone_of_voice": "descrizione del tono",
+    "punti_chiave": ["punto 1", "punto 2", "punto 3"]
+  },
+  "social_content": {
+    "piattaforme_attive": ["piattaforma 1", "piattaforma 2"],
+    "frequenza_post": "frequenza stimata",
+    "temi_ricorrenti": ["tema 1", "tema 2", "tema 3"],
+    "hashtag_principali": ["#hashtag1", "#hashtag2"],
+    "engagement_stimato": "basso|medio|medio-alto|alto",
+    "formato_prevalente": "descrizione formato piu usato"
+  },
+  "messaging": {
+    "usp_principale": "la proposta di valore unica comunicata",
+    "angoli_comunicativi": ["angolo 1", "angolo 2", "angolo 3"],
+    "target_percepito": "descrizione del target a cui si rivolgono",
+    "differenziazione_vs_mia": "come si differenziano rispetto a MIA"
+  },
+  "valutazione_complessiva": "sintesi in 2-3 frasi della strategia comunicativa complessiva",
+  "suggerimenti_per_mia": ["suggerimento 1", "suggerimento 2", "suggerimento 3"]
+}
+
+Regole:
+- Basa l'analisi su dati reali trovati online
+- Se non trovi informazioni su un aspetto, indica "Non rilevato" invece di inventare
+- Gli esempi di copy devono essere realistici e basati sullo stile reale del competitor
+- I suggerimenti per MIA devono essere specifici e azionabili
+- RISPONDI SOLO con il JSON, senza testo aggiuntivo`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        thinkingConfig: { thinkingLevel: 'HIGH' }
+      },
+      tools: [{ googleSearch: {} }]
+    });
+
+    const parsed = extractJson(response.text);
+    const result = validateSocialAnalysisResponse(parsed, competitorName);
+    setCache(cacheKey, result, CACHE_TTL_SOCIAL_ANALYSIS);
+    return result;
+  } catch (error) {
+    console.error('[GeminiService] SocialAnalysis error:', error.message);
+    return null;
+  }
+}
+
+function validateSocialAnalysisResponse(parsed, competitorName) {
+  const result = {
+    competitor: parsed.competitor || competitorName,
+    meta_ads: {
+      attivo: parsed.meta_ads?.attivo ?? false,
+      num_ads_stimato: String(parsed.meta_ads?.num_ads_stimato || 'Non rilevato'),
+      formati_principali: Array.isArray(parsed.meta_ads?.formati_principali) ? parsed.meta_ads.formati_principali.map(String) : [],
+      copy_esempi: Array.isArray(parsed.meta_ads?.copy_esempi) ? parsed.meta_ads.copy_esempi.map(String) : [],
+      cta_principali: Array.isArray(parsed.meta_ads?.cta_principali) ? parsed.meta_ads.cta_principali.map(String) : [],
+      tone_of_voice: String(parsed.meta_ads?.tone_of_voice || 'Non rilevato'),
+      punti_chiave: Array.isArray(parsed.meta_ads?.punti_chiave) ? parsed.meta_ads.punti_chiave.map(String) : []
+    },
+    social_content: {
+      piattaforme_attive: Array.isArray(parsed.social_content?.piattaforme_attive) ? parsed.social_content.piattaforme_attive.map(String) : [],
+      frequenza_post: String(parsed.social_content?.frequenza_post || 'Non rilevato'),
+      temi_ricorrenti: Array.isArray(parsed.social_content?.temi_ricorrenti) ? parsed.social_content.temi_ricorrenti.map(String) : [],
+      hashtag_principali: Array.isArray(parsed.social_content?.hashtag_principali) ? parsed.social_content.hashtag_principali.map(String) : [],
+      engagement_stimato: String(parsed.social_content?.engagement_stimato || 'Non rilevato'),
+      formato_prevalente: String(parsed.social_content?.formato_prevalente || 'Non rilevato')
+    },
+    messaging: {
+      usp_principale: String(parsed.messaging?.usp_principale || 'Non rilevato'),
+      angoli_comunicativi: Array.isArray(parsed.messaging?.angoli_comunicativi) ? parsed.messaging.angoli_comunicativi.map(String) : [],
+      target_percepito: String(parsed.messaging?.target_percepito || 'Non rilevato'),
+      differenziazione_vs_mia: String(parsed.messaging?.differenziazione_vs_mia || 'Non rilevato')
+    },
+    valutazione_complessiva: String(parsed.valutazione_complessiva || 'Analisi non disponibile'),
+    suggerimenti_per_mia: Array.isArray(parsed.suggerimenti_per_mia) ? parsed.suggerimenti_per_mia.map(String) : []
+  };
+
+  return result;
 }
