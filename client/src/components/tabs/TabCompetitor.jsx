@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Users, Zap, Search, Loader2, Megaphone, MessageCircle, Target, Lightbulb, ChevronDown, ChevronUp, Hash, ExternalLink } from 'lucide-react';
+import { Users, Zap, Search, Loader2, Megaphone, MessageCircle, Target, Lightbulb, ChevronDown, ChevronUp, Hash, ExternalLink, RefreshCw } from 'lucide-react';
 import Card from '../ui/Card';
 import ProgressBar from '../ui/ProgressBar';
 import EmptyState from '../ui/EmptyState';
-import { getCompetitorSocialAnalysis } from '../../utils/api';
+import { getCompetitorSocialAnalysis, refreshCompetitors } from '../../utils/api';
 
 function SocialAnalysisPanel({ data }) {
   const { meta_ads, social_content, messaging, valutazione_complessiva, suggerimenti_per_mia } = data;
@@ -291,7 +291,9 @@ function CompetitorCard({ comp, index }) {
   );
 }
 
-function TabCompetitor({ data }) {
+function TabCompetitor({ data, onDataUpdate }) {
+  const [refreshing, setRefreshing] = useState(false);
+
   if (!data) {
     return <EmptyState message="Nessun dato sui competitor disponibile." />;
   }
@@ -299,15 +301,43 @@ function TabCompetitor({ data }) {
   const competitorList = data.competitors || data.competitor || [];
   const insights = data.insights || data.considerazioni || [];
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const result = await refreshCompetitors();
+      if (result?.data && onDataUpdate) {
+        onDataUpdate(result.data);
+      } else {
+        // Se non c'è callback, ricarica la pagina
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Refresh error:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Lista competitor */}
       {competitorList.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-mia-dark mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-mia-blue" />
-            Analisi Competitor
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-mia-dark flex items-center gap-2">
+              <Users className="w-5 h-5 text-mia-blue" />
+              Analisi Competitor
+            </h2>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
+              title="Rigenera analisi competitor con dati aggiornati"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Rigenerazione...' : 'Rigenera'}
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {competitorList.map((comp, index) => (
               <CompetitorCard key={comp.id || index} comp={comp} index={index} />

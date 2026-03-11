@@ -273,7 +273,7 @@ RISPONDI IN ITALIANO con questo formato JSON esatto:
 }
 
 Regole:
-- Analizza 3-5 competitor
+- Analizza ALMENO 5-7 competitor (i 3 obbligatori + altri trovati online)
 - Lo score va da 0 a 100 (competitivita rispetto a MIA)
 - Genera 4-6 cose che i competitor fanno meglio
 - Genera 4-6 opportunita per differenziarsi

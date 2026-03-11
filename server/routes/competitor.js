@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { competitorData } from '../data/mockData.js';
-import { generateCompetitorAnalysis, generateCompetitorSocialAnalysis, isGeminiAvailable } from '../services/geminiService.js';
+import { generateCompetitorAnalysis, generateCompetitorSocialAnalysis, isGeminiAvailable, clearCache } from '../services/geminiService.js';
 import { competitorSocialMockData } from '../data/mockData.js';
 
 const router = express.Router();
@@ -64,6 +64,26 @@ router.get('/:id/social-analysis', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('[Competitors] Social analysis error:', error.message);
     res.status(500).json({ error: true, message: 'Errore nell\'analisi social.' });
+  }
+});
+
+// POST /api/competitors/refresh - Forza rigenerazione analisi competitor (svuota cache)
+router.post('/refresh', authenticateToken, async (req, res) => {
+  try {
+    clearCache('competitors');
+    cachedAICompetitorData = null;
+
+    if (isGeminiAvailable()) {
+      const aiResult = await generateCompetitorAnalysis();
+      if (aiResult) {
+        cachedAICompetitorData = aiResult;
+        return res.json({ status: 'ok', message: 'Analisi competitor rigenerata.', data: aiResult });
+      }
+    }
+    res.json({ status: 'ok', message: 'Cache svuotata. Dati mock attivi.', data: competitorData });
+  } catch (error) {
+    console.error('[Competitors] Refresh error:', error.message);
+    res.status(500).json({ error: true, message: 'Errore nella rigenerazione.' });
   }
 });
 

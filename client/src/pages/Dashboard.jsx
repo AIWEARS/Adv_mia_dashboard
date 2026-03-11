@@ -178,7 +178,7 @@ function Dashboard() {
       case 'piano30':
         return <TabPiano data={plan30} planType="30" onToggle={handleToggleAction} />;
       case 'competitor':
-        return <TabCompetitor data={competitors} />;
+        return <TabCompetitor data={competitors} onDataUpdate={(newData) => setCompetitors(newData)} />;
       case 'salute':
         return <TabSalute data={trackingHealth} />;
       case 'leads':

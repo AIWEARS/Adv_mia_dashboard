@@ -95,6 +95,13 @@ export async function getCompetitorSocialAnalysis(competitorId) {
 }
 
 /**
+ * Forza rigenerazione analisi competitor (svuota cache Gemini)
+ */
+export async function refreshCompetitors() {
+  return fetchApi('/competitors/refresh', { method: 'POST' });
+}
+
+/**
  * Ottieni lo stato di salute del tracciamento
  */
 export async function getTrackingHealth() {
