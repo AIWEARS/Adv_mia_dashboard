@@ -1,15 +1,38 @@
 import React, { useState } from 'react';
-import { Users, Zap, Search, Loader2, Megaphone, MessageCircle, Target, Lightbulb, ChevronDown, ChevronUp, Hash, ExternalLink, RefreshCw } from 'lucide-react';
+import { Users, Zap, Search, Loader2, Megaphone, MessageCircle, Target, Lightbulb, ChevronDown, ChevronUp, Hash, ExternalLink, RefreshCw, AlertTriangle, ShieldCheck, ShieldAlert, Link2 } from 'lucide-react';
 import Card from '../ui/Card';
 import ProgressBar from '../ui/ProgressBar';
 import EmptyState from '../ui/EmptyState';
 import { getCompetitorSocialAnalysis, refreshCompetitors } from '../../utils/api';
 
+const attendibilitaConfig = {
+  alta: { color: 'bg-green-100 text-green-700 border-green-200', icon: ShieldCheck, label: 'Attendibilità alta', desc: 'Dati basati su fonti verificate' },
+  media: { color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: AlertTriangle, label: 'Attendibilità media', desc: 'Mix di dati verificati e stime' },
+  bassa: { color: 'bg-red-100 text-red-700 border-red-200', icon: ShieldAlert, label: 'Attendibilità bassa', desc: 'Pochi dati verificati, prevalentemente stime AI' },
+};
+
 function SocialAnalysisPanel({ data }) {
-  const { meta_ads, social_content, messaging, valutazione_complessiva, suggerimenti_per_mia } = data;
+  const { meta_ads, social_content, messaging, valutazione_complessiva, suggerimenti_per_mia, attendibilita, nota_attendibilita, fonti_trovate } = data;
+  const attConfig = attendibilitaConfig[attendibilita] || attendibilitaConfig.bassa;
+  const AttIcon = attConfig.icon;
 
   return (
     <div className="mt-4 space-y-4 border-t border-slate-200 pt-4">
+      {/* Badge Attendibilità */}
+      <div className={`rounded-lg p-3 border ${attConfig.color} flex items-start gap-2.5`}>
+        <AttIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <div className="text-xs">
+          <span className="font-semibold">{attConfig.label}</span>
+          {nota_attendibilita && <span className="ml-1">— {nota_attendibilita}</span>}
+          {fonti_trovate && fonti_trovate.length > 0 && (
+            <div className="mt-1.5 flex items-start gap-1">
+              <Link2 className="w-3 h-3 mt-0.5 flex-shrink-0" />
+              <span>Fonti: {fonti_trovate.join(' · ')}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Meta Ads */}
       <div className="bg-blue-50 rounded-lg p-4">
         <h4 className="text-sm font-semibold text-blue-800 flex items-center gap-2 mb-3">

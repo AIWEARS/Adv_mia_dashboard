@@ -520,78 +520,63 @@ export async function generateCompetitorSocialAnalysis(competitorName, competito
   const ai = getClient();
   if (!ai) return null;
 
-  const prompt = `Sei un analista di marketing digitale e social media specializzato nel settore AI, SaaS e fashion tech.
+  const prompt = `Sei un analista di marketing digitale. Devi analizzare la comunicazione social e advertising di: ${competitorName} (${competitorDomain})
 
-Devi analizzare in profondita' la comunicazione social e advertising di: ${competitorName} (${competitorDomain})
+MIA (itsmia.it) e' il nostro brand - piattaforma AI italiana di shooting digitale per fashion e-commerce.
 
-MIA (itsmia.it) e' il nostro brand - piattaforma AI italiana di shooting digitale per fashion e-commerce. Genera foto professionali di modelle con AI.
+REGOLA FONDAMENTALE: RIPORTA SOLO INFORMAZIONI VERIFICATE.
+- NON inventare numeri, copy, hashtag o dati che non hai trovato online
+- Se non trovi un dato, scrivi "Non rilevato" - MAI inventare
+- Per ogni sezione indica il livello di attendibilita' dei dati
+- Cerca su Facebook Ad Library (https://www.facebook.com/ads/library/) per le ads reali
+- Cerca i profili social reali su Instagram, LinkedIn, TikTok
+- Analizza il sito web ${competitorDomain} per il messaging
 
-CERCA SU GOOGLE informazioni reali su:
-1. Le ads attive di ${competitorName} su Meta (Facebook Ad Library), Google Ads
-2. I profili social di ${competitorName} (Instagram, LinkedIn, TikTok, X/Twitter)
-3. Il sito web ${competitorDomain} - messaggi chiave, landing page, copy
-4. Eventuali articoli, PR, case study pubblicati da ${competitorName}
-
-ANALIZZA IN DETTAGLIO:
-
-A) META ADS & ADVERTISING:
-- Sono attivi su Meta Ads? Quanti annunci stimati hanno?
-- Quali formati usano (video, carosello, immagine statica, stories)?
-- Esempi di copy che utilizzano (ricostruisci 2-3 esempi realistici basati sul loro stile)
-- CTA principali nei loro annunci
-- Tone of voice delle ads
-- Punti chiave della comunicazione pubblicitaria
-
-B) CONTENUTI SOCIAL:
-- Su quali piattaforme sono piu attivi?
-- Frequenza di pubblicazione stimata
-- Temi ricorrenti nei post (behind the scenes, testimonial, tutorial, prodotto, ecc.)
-- Hashtag principali utilizzati
-- Livello di engagement stimato
-- Formato prevalente dei contenuti
-
-C) MESSAGING E POSIZIONAMENTO:
-- Qual e' la loro USP (proposta di valore unica) comunicata?
-- Quali angoli comunicativi usano (velocita, prezzo, qualita, innovazione, ecc.)?
-- A chi si rivolgono (target percepito)?
-- Come si differenziano rispetto a MIA?
+CERCA SU GOOGLE informazioni verificabili su:
+1. "${competitorName}" site:facebook.com/ads/library - ads attive reali
+2. "${competitorName}" Instagram / LinkedIn / TikTok - profili social reali
+3. ${competitorDomain} - sito web, messaggi, copy reali
+4. "${competitorName}" reviews OR case study - articoli e fonti terze
 
 RISPONDI IN ITALIANO con questo formato JSON esatto:
 {
   "competitor": "${competitorName}",
+  "attendibilita": "alta|media|bassa",
+  "nota_attendibilita": "spiegazione di quanti dati reali hai trovato e quanti sono stime",
+  "fonti_trovate": ["url o descrizione fonte 1", "url o descrizione fonte 2"],
   "meta_ads": {
     "attivo": true,
-    "num_ads_stimato": "range stimato es. 10-20",
-    "formati_principali": ["formato 1", "formato 2"],
-    "copy_esempi": ["esempio copy realistico 1", "esempio copy realistico 2", "esempio copy realistico 3"],
-    "cta_principali": ["CTA 1", "CTA 2"],
-    "tone_of_voice": "descrizione del tono",
-    "punti_chiave": ["punto 1", "punto 2", "punto 3"]
+    "num_ads_stimato": "range o 'Non rilevato'",
+    "formati_principali": ["formato verificato"],
+    "copy_esempi": ["SOLO copy reali trovati online, oppure array vuoto se non trovati"],
+    "cta_principali": ["CTA verificate"],
+    "tone_of_voice": "basato su dati reali o 'Non rilevato'",
+    "punti_chiave": ["solo punti verificati"]
   },
   "social_content": {
-    "piattaforme_attive": ["piattaforma 1", "piattaforma 2"],
-    "frequenza_post": "frequenza stimata",
-    "temi_ricorrenti": ["tema 1", "tema 2", "tema 3"],
-    "hashtag_principali": ["#hashtag1", "#hashtag2"],
-    "engagement_stimato": "basso|medio|medio-alto|alto",
-    "formato_prevalente": "descrizione formato piu usato"
+    "piattaforme_attive": ["solo piattaforme dove hai trovato profili reali"],
+    "frequenza_post": "basata su dati reali o 'Non rilevato'",
+    "temi_ricorrenti": ["solo temi verificati dai post reali"],
+    "hashtag_principali": ["solo hashtag trovati nei post reali"],
+    "engagement_stimato": "basato su dati reali o 'Non rilevato'",
+    "formato_prevalente": "basato su dati reali o 'Non rilevato'"
   },
   "messaging": {
-    "usp_principale": "la proposta di valore unica comunicata",
-    "angoli_comunicativi": ["angolo 1", "angolo 2", "angolo 3"],
-    "target_percepito": "descrizione del target a cui si rivolgono",
-    "differenziazione_vs_mia": "come si differenziano rispetto a MIA"
+    "usp_principale": "dal sito web reale",
+    "angoli_comunicativi": ["dal sito e ads reali"],
+    "target_percepito": "dal posizionamento reale",
+    "differenziazione_vs_mia": "basata su dati reali"
   },
-  "valutazione_complessiva": "sintesi in 2-3 frasi della strategia comunicativa complessiva",
-  "suggerimenti_per_mia": ["suggerimento 1", "suggerimento 2", "suggerimento 3"]
+  "valutazione_complessiva": "sintesi basata SOLO su cio' che hai effettivamente trovato",
+  "suggerimenti_per_mia": ["suggerimento 1 basato su dati reali", "suggerimento 2"]
 }
 
-Regole:
-- Basa l'analisi su dati reali trovati online
-- Se non trovi informazioni su un aspetto, indica "Non rilevato" invece di inventare
-- Gli esempi di copy devono essere realistici e basati sullo stile reale del competitor
-- I suggerimenti per MIA devono essere specifici e azionabili
-- RISPONDI SOLO con il JSON, senza testo aggiuntivo`;
+Regole CRITICHE:
+- attendibilita "alta" = hai trovato fonti dirette (Ad Library, profili social, sito). "media" = hai trovato alcune info ma non tutto. "bassa" = pochi dati trovati, molte stime.
+- Se non trovi ads nella Facebook Ad Library, metti "attivo": false e "Non rilevato" nei campi
+- NON generare copy di fantasia. Se non trovi copy reali, lascia l'array vuoto []
+- Elenca le fonti reali che hai consultato nel campo "fonti_trovate"
+- RISPONDI SOLO con il JSON`;
 
   try {
     const response = await ai.models.generateContent({
@@ -640,7 +625,10 @@ function validateSocialAnalysisResponse(parsed, competitorName) {
       differenziazione_vs_mia: String(parsed.messaging?.differenziazione_vs_mia || 'Non rilevato')
     },
     valutazione_complessiva: String(parsed.valutazione_complessiva || 'Analisi non disponibile'),
-    suggerimenti_per_mia: Array.isArray(parsed.suggerimenti_per_mia) ? parsed.suggerimenti_per_mia.map(String) : []
+    suggerimenti_per_mia: Array.isArray(parsed.suggerimenti_per_mia) ? parsed.suggerimenti_per_mia.map(String) : [],
+    attendibilita: String(parsed.attendibilita || 'bassa'),
+    nota_attendibilita: String(parsed.nota_attendibilita || 'Livello di attendibilita\' non specificato dall\'AI.'),
+    fonti_trovate: Array.isArray(parsed.fonti_trovate) ? parsed.fonti_trovate.map(String) : []
   };
 
   return result;
