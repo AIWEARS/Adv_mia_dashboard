@@ -289,6 +289,33 @@ function parseInt2(val) {
   return Math.round(parseNumber(val));
 }
 
+/**
+ * Normalizza date italiane abbreviate (es. "lun 9 mar 2026") in formato ISO "YYYY-MM-DD"
+ * Se non riesce a parsare, restituisce la stringa originale.
+ */
+function normalizeDate(dateStr) {
+  if (!dateStr) return null;
+  const str = String(dateStr).trim();
+  // Gia' in formato ISO?
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10);
+  // Formato italiano abbreviato: "lun 9 mar 2026" o "9 mar 2026"
+  const mesiIT = { gen: '01', feb: '02', mar: '03', apr: '04', mag: '05', giu: '06',
+                   lug: '07', ago: '08', set: '09', ott: '10', nov: '11', dic: '12' };
+  const match = str.match(/(\d{1,2})\s+(gen|feb|mar|apr|mag|giu|lug|ago|set|ott|nov|dic)\w*\s+(\d{4})/i);
+  if (match) {
+    const day = match[1].padStart(2, '0');
+    const month = mesiIT[match[2].toLowerCase().slice(0, 3)];
+    const year = match[3];
+    if (month) return `${year}-${month}-${day}`;
+  }
+  // Formato dd/mm/yyyy
+  const slashMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (slashMatch) {
+    return `${slashMatch[3]}-${slashMatch[2].padStart(2, '0')}-${slashMatch[1].padStart(2, '0')}`;
+  }
+  return str;
+}
+
 // ---------- PARSER CSV ----------
 
 /**
@@ -308,7 +335,8 @@ function parseGoogleAdsCsv(content) {
     // Cerca la riga header che contiene nomi di colonna tipici
     if (line.includes('campaign') || line.includes('campagna') ||
         line.includes('cost') || line.includes('costo') ||
-        line.includes('clicks') || line.includes('clic')) {
+        line.includes('clicks') || line.includes('clic') ||
+        line.includes('impr') || line.includes('data')) {
       startIndex = i;
       break;
     }
@@ -344,14 +372,22 @@ function parseGoogleAdsCsv(content) {
   let skippedRows = 0;
   let periodo = { inizio: null, fine: null };
 
+  // Controlla se esiste una colonna campagna nel CSV
+  const hasCampaignColumn = foundColumns.some(col => {
+    const lc = col.toLowerCase().trim();
+    return ['campaign', 'campagna', 'campaign name', 'nome campagna', 'campaign_name', 'nom de la campagne'].includes(lc);
+  });
+
   for (const row of records) {
     const campaignName = findColumn(row, [
       'Campaign', 'Campagna', 'campaign', 'Campaign name', 'Nome campagna',
       'campaign_name', 'Campaign Name', 'Nom de la campagne'
     ], null);
 
-    if (!campaignName) { skippedRows++; continue; }
-    if (campaignName.toLowerCase() === 'total' || campaignName.toLowerCase() === 'totale') continue;
+    // Se il CSV non ha colonna campagna (es. export serie temporali), usa nome di default
+    const effectiveCampaignName = campaignName || (hasCampaignColumn ? null : 'Google Ads (totale)');
+    if (!effectiveCampaignName) { skippedRows++; continue; }
+    if (effectiveCampaignName.toLowerCase() === 'total' || effectiveCampaignName.toLowerCase() === 'totale') continue;
 
     const cost = parseNumber(findColumn(row, [
       'Cost', 'Costo', 'cost', 'Spend', 'Amount', 'Budget spent',
@@ -379,10 +415,11 @@ function parseGoogleAdsCsv(content) {
       'Avg. CPC', 'CPC medio', 'CPC', 'cpc', 'Avg. cost per click',
       'Costo medio per clic'
     ], 0));
-    const date = findColumn(row, [
+    const dateRaw = findColumn(row, [
       'Day', 'Date', 'Giorno', 'Data', 'Reporting starts',
       'Start date', 'Data inizio', 'Jour'
     ], null);
+    const date = normalizeDate(dateRaw);
 
     // Traccia periodo
     if (date) {
@@ -391,21 +428,21 @@ function parseGoogleAdsCsv(content) {
     }
 
     // Aggrega per campagna
-    if (!campaignMap[campaignName]) {
-      campaignMap[campaignName] = {
-        name: campaignName,
+    if (!campaignMap[effectiveCampaignName]) {
+      campaignMap[effectiveCampaignName] = {
+        name: effectiveCampaignName,
         cost: 0, clicks: 0, impressions: 0,
         conversions: { lead: 0, go_to_app: 0 },
         convValue: 0, ctr_raw: [], cpc_raw: []
       };
     }
-    campaignMap[campaignName].cost += cost;
-    campaignMap[campaignName].clicks += clicks;
-    campaignMap[campaignName].impressions += impressions;
-    campaignMap[campaignName].conversions.lead += Math.round(conversions);
-    campaignMap[campaignName].convValue += convValue;
-    if (ctr > 0) campaignMap[campaignName].ctr_raw.push(ctr);
-    if (avgCpc > 0) campaignMap[campaignName].cpc_raw.push(avgCpc);
+    campaignMap[effectiveCampaignName].cost += cost;
+    campaignMap[effectiveCampaignName].clicks += clicks;
+    campaignMap[effectiveCampaignName].impressions += impressions;
+    campaignMap[effectiveCampaignName].conversions.lead += Math.round(conversions);
+    campaignMap[effectiveCampaignName].convValue += convValue;
+    if (ctr > 0) campaignMap[effectiveCampaignName].ctr_raw.push(ctr);
+    if (avgCpc > 0) campaignMap[effectiveCampaignName].cpc_raw.push(avgCpc);
 
     // Aggrega per giorno
     if (date) {
@@ -518,11 +555,12 @@ function parseMetaAdsCsv(content) {
     const frequency = parseNumber(findColumn(row, [
       'Frequency', 'Frequenza', 'frequency'
     ], 0));
-    const date = findColumn(row, [
+    const dateRaw = findColumn(row, [
       'Day', 'Date', 'Giorno', 'Reporting starts', 'Inizio report',
       'Data', 'Start date', 'Data inizio', 'Reporting start',
       'Inizio reportistica'
     ], null);
+    const date = normalizeDate(dateRaw);
 
     // Traccia periodo
     if (date) {

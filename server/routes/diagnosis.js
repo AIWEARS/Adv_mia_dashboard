@@ -2,31 +2,104 @@ import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { summaryData, diagnosisData, trendsData } from '../data/mockData.js';
 import { getUnifiedData, getActiveSource } from '../services/dataStore.js';
-import { generateDiagnosis, generateMetricComments, isGeminiAvailable, buildMockUnified } from '../services/geminiService.js';
+import { generateDiagnosis, generateCompetitorAnalysis, generateMetricComments, isGeminiAvailable, buildMockUnified } from '../services/geminiService.js';
 
 const router = express.Router();
+
+// Cache locale per competitor (evita refetch se gia in cache Gemini)
+let cachedCompetitors = null;
+let cachedCompetitorsAt = 0;
+const COMP_CACHE_TTL = 30 * 60 * 1000; // 30 minuti
+
+async function getCompetitorDataForDiagnosis() {
+  if (cachedCompetitors && Date.now() - cachedCompetitorsAt < COMP_CACHE_TTL) {
+    return cachedCompetitors;
+  }
+  if (!isGeminiAvailable()) return null;
+  try {
+    const result = await generateCompetitorAnalysis();
+    if (result) {
+      cachedCompetitors = result;
+      cachedCompetitorsAt = Date.now();
+    }
+    return result;
+  } catch (err) {
+    console.error('[Diagnosis] Error fetching competitor data:', err.message);
+    return cachedCompetitors;
+  }
+}
 
 /**
  * Genera diagnosi automatica basata sui dati unificati (FALLBACK rule-based)
  */
 function buildDiagnosisFromUnified(unified) {
   const issues = [];
-  const suggerimenti = [];
+  const azioni_immediate = [];
+  const analisi_campagne = [];
 
   const cpl = unified.conversioni.lead_preventivo > 0
     ? unified.spesa_totale / unified.conversioni.lead_preventivo
     : 0;
 
-  // Analisi CTR
+  // Analisi per campagna
+  for (const camp of unified.campagne) {
+    const campCtr = camp.impressioni > 0 ? (camp.click / camp.impressioni * 100) : 0;
+    const campCpc = camp.click > 0 ? camp.spesa / camp.click : 0;
+    const campLeads = camp.conversioni?.lead || camp.conversioni?.lead_preventivo || 0;
+    const campCpl = campLeads > 0 ? camp.spesa / campLeads : 0;
+
+    let verdetto = 'buona';
+    const problemi = [];
+    const cosa_fare = [];
+
+    if (campCtr < 1.0) {
+      verdetto = 'critica';
+      problemi.push(`CTR molto basso (${campCtr.toFixed(2)}%) - gli annunci non attirano click`);
+      cosa_fare.push('Riscrivi headline e descrizioni con un angolo piu diretto. Testa domande, numeri, urgenza.');
+    } else if (campCtr < 1.5) {
+      verdetto = 'da_ottimizzare';
+      problemi.push(`CTR sotto la media (${campCtr.toFixed(2)}%)`);
+      cosa_fare.push('Testa nuove varianti di copy con angoli diversi.');
+    }
+
+    if (camp.spesa > 100 && campLeads === 0) {
+      verdetto = 'da_spegnere';
+      problemi.push(`Spesa di ${camp.spesa.toFixed(0)} euro senza nessuna conversione`);
+      cosa_fare.push('Spegni questa campagna o rivedila completamente. Il budget e\' sprecato.');
+    } else if (campCpl > 200 && campLeads > 0) {
+      verdetto = 'critica';
+      problemi.push(`CPL troppo alto (${campCpl.toFixed(0)} euro)`);
+      cosa_fare.push(`Riduci il budget o restringi il targeting. CPL obiettivo: sotto 100 euro.`);
+    }
+
+    analisi_campagne.push({
+      nome_campagna: camp.nome,
+      piattaforma: camp.piattaforma,
+      verdetto,
+      metriche: {
+        spesa: camp.spesa,
+        click: camp.click,
+        impressioni: camp.impressioni,
+        ctr: parseFloat(campCtr.toFixed(2)),
+        cpc: parseFloat(campCpc.toFixed(2)),
+        conversioni: campLeads,
+        cpl: parseFloat(campCpl.toFixed(2))
+      },
+      problemi,
+      cosa_fare
+    });
+  }
+
+  // Analisi CTR globale
   if (unified.ctr_medio < 1.5) {
     issues.push({
       id: 'ctr_basso',
       area: 'creativita',
-      titolo: 'CTR sotto la media',
+      titolo: 'CTR sotto la media di settore',
       gravita: 'alta',
-      descrizione: `Il CTR medio e' ${unified.ctr_medio.toFixed(2)}%, sotto la soglia del 1.5%. Le creativita non catturano abbastanza attenzione.`,
-      impatto: `Stai pagando per impressioni che non generano click. Ogni punto percentuale di CTR in piu puo ridurre il costo per click.`,
-      azione: `Testa nuove creativita con ganci diversi: domande, numeri specifici, urgenza. Cambia le immagini ogni 2 settimane.`
+      descrizione: `Il CTR medio e' ${unified.ctr_medio.toFixed(2)}%, sotto la soglia del 1.5%.`,
+      impatto: `Stai pagando per impressioni che non generano click.`,
+      azione: `1. Riscrivi le headline con un gancio forte\n2. Testa almeno 3 varianti per annuncio\n3. Cambia le immagini ogni 2 settimane`
     });
   }
 
@@ -37,19 +110,9 @@ function buildDiagnosisFromUnified(unified) {
       area: 'budget',
       titolo: 'Costo per lead troppo alto',
       gravita: 'alta',
-      descrizione: `Il costo per lead e' ${cpl.toFixed(2)} euro. Per il settore moda su misura, dovrebbe stare sotto i 100 euro.`,
-      impatto: `Con ${unified.spesa_totale.toFixed(0)} euro di spesa, dovresti ottenere almeno ${Math.ceil(unified.spesa_totale / 100)} lead invece di ${unified.conversioni.lead_preventivo}.`,
-      azione: `Rivedi il targeting: restringe il pubblico ai profili piu propensi. Migliora la landing page per aumentare le conversioni.`
-    });
-  } else if (cpl > 80 && unified.conversioni.lead_preventivo > 0) {
-    issues.push({
-      id: 'cpl_migliorabile',
-      area: 'budget',
-      titolo: 'Costo per lead migliorabile',
-      gravita: 'media',
-      descrizione: `Il costo per lead e' ${cpl.toFixed(2)} euro. Accettabile ma con margine di miglioramento.`,
-      impatto: 'Ottimizzando il CPL sotto i 80 euro risparmieresti budget da reinvestire.',
-      azione: `Analizza quali campagne hanno il CPL piu basso e sposta budget verso quelle.`
+      descrizione: `CPL attuale: ${cpl.toFixed(2)} euro. Benchmark: 50-150 euro.`,
+      impatto: `Con ${unified.spesa_totale.toFixed(0)} euro dovresti avere almeno ${Math.ceil(unified.spesa_totale / 100)} lead, ne hai ${unified.conversioni.lead_preventivo}.`,
+      azione: `1. Sposta budget dalle campagne peggiori alle migliori\n2. Restringi il targeting\n3. Migliora la landing page`
     });
   }
 
@@ -60,95 +123,77 @@ function buildDiagnosisFromUnified(unified) {
       area: 'conversioni',
       titolo: 'Nessun lead registrato',
       gravita: 'critica',
-      descrizione: `Hai speso ${unified.spesa_totale.toFixed(0)} euro senza ottenere nessun lead. Il tracciamento potrebbe non funzionare, oppure la landing page non converte.`,
-      impatto: `Budget sprecato al 100%. Ogni giorno senza lead e denaro perso.`,
-      azione: 'Verifica subito il tracciamento (tab Salute Tracciamento). Controlla che il link mailto funzioni e sia tracciato in GTM.'
+      descrizione: `Spesi ${unified.spesa_totale.toFixed(0)} euro, zero lead.`,
+      impatto: `Budget sprecato al 100%.`,
+      azione: `URGENTE: 1. Verifica tracciamento conversioni 2. Controlla form/mailto 3. Rivedi landing page`
     });
   }
 
-  // Sbilanciamento spesa
-  if (unified.spesa_google > 0 && unified.spesa_meta > 0) {
-    const ratio = unified.spesa_google / unified.spesa_meta;
-    if (ratio > 3 || ratio < 0.33) {
-      const piattaforma_dominante = ratio > 3 ? 'Google' : 'Meta';
-      issues.push({
-        id: 'budget_sbilanciato',
-        area: 'budget',
-        titolo: 'Budget sbilanciato tra piattaforme',
-        gravita: 'media',
-        descrizione: `La spesa e' fortemente sbilanciata verso ${piattaforma_dominante}. Google: ${unified.spesa_google.toFixed(0)} euro, Meta: ${unified.spesa_meta.toFixed(0)} euro.`,
-        impatto: `Potresti perdere opportunita sull'altra piattaforma.`,
-        azione: `Testa un budget piu bilanciato per 2 settimane e confronta i risultati per piattaforma.`
+  // Azioni immediate
+  azioni_immediate.push({
+    id: 'azione_1',
+    titolo: 'Analizza ogni campagna singolarmente',
+    descrizione: 'Guarda la sezione "Analisi Campagne" qui sopra. Spegni o ottimizza le campagne rosse.',
+    tempo_stimato: '30 min',
+    impatto_atteso: 'Smettere di sprecare budget su campagne che non funzionano',
+    priorita: 'alta'
+  });
+
+  if (analisi_campagne.length > 1) {
+    const sorted = [...analisi_campagne].sort((a, b) => {
+      const scoreMap = { da_spegnere: 0, critica: 1, da_ottimizzare: 2, buona: 3 };
+      return (scoreMap[a.verdetto] || 2) - (scoreMap[b.verdetto] || 2);
+    });
+    const worst = sorted[0];
+    if (worst && worst.verdetto !== 'buona') {
+      azioni_immediate.push({
+        id: 'azione_2',
+        titolo: `Intervieni sulla campagna "${worst.nome_campagna}"`,
+        descrizione: `Questa e' la campagna peggiore. ${worst.problemi.join('. ')}. ${worst.cosa_fare.join('. ')}`,
+        tempo_stimato: '1 ora',
+        impatto_atteso: 'Recupero budget sprecato',
+        priorita: 'alta'
       });
     }
   }
 
-  // Poche conversioni webapp
-  if (unified.conversioni.click_webapp < 50 && unified.click_totali > 500) {
-    issues.push({
-      id: 'basso_go_to_app',
-      area: 'funnel',
-      titolo: 'Pochi click verso la web app',
-      gravita: 'media',
-      descrizione: `Solo ${unified.conversioni.click_webapp} utenti sono arrivati su app.miafashion.it su ${unified.click_totali} click totali.`,
-      impatto: 'Il funnel perde troppi utenti prima della web app. La CTA o la landing non guidano abbastanza verso il configuratore.',
-      azione: `Aggiungi CTA piu visibili verso la web app. Prova un pulsante "Configura il tuo abito" nella landing.`
-    });
-  }
-
-  // Poche registrazioni rispetto ai click webapp
-  if (unified.conversioni.registrazioni < 5 && unified.conversioni.click_webapp > 50) {
-    issues.push({
-      id: 'basso_signup',
-      area: 'funnel',
-      titolo: 'Tasso di registrazione basso',
-      gravita: 'media',
-      descrizione: `Solo ${unified.conversioni.registrazioni} registrazioni su ${unified.conversioni.click_webapp} visite alla web app.`,
-      impatto: `Gli utenti visitano l'app ma non si registrano. L'onboarding potrebbe essere troppo complicato.`,
-      azione: 'Semplifica il form di registrazione. Offri un incentivo (es: sconto primo ordine) per chi si registra.'
-    });
-  }
-
-  // Suggerimenti generali
-  suggerimenti.push({
-    id: 's1',
-    titolo: 'Monitora i dati ogni settimana',
-    descrizione: `Controlla questa dashboard ogni lunedi mattina per identificare trend negativi prima che diventino problemi.`
-  });
-
-  if (unified.campagne.length > 0) {
-    suggerimenti.push({
-      id: 's2',
-      titolo: `Analizza le ${unified.campagne.length} campagne singolarmente`,
-      descrizione: 'Identifica la campagna con il CPL migliore e sposta budget dalle peggiori.'
-    });
-  }
-
-  suggerimenti.push({
-    id: 's3',
-    titolo: `Testa A/B le creativita`,
-    descrizione: 'Crea almeno 3 varianti per ogni annuncio. Dopo 7 giorni, tieni solo la migliore e creane di nuove.'
+  azioni_immediate.push({
+    id: 'azione_3',
+    titolo: 'Testa nuove creativita',
+    descrizione: 'Crea 3 varianti di annuncio con angoli diversi: 1) Risparmio tempo/costi 2) Qualita professionale 3) Facilita d\'uso.',
+    tempo_stimato: '2 ore',
+    impatto_atteso: 'Aumento CTR del 20-50%',
+    priorita: 'alta'
   });
 
   return {
+    analisi_campagne,
     issues,
-    suggerimenti,
+    da_competitor: [],
+    azioni_immediate,
+    copy_suggeriti: [],
+    budget_consiglio: unified.spesa_google > 0 || unified.spesa_meta > 0 ? {
+      budget_attuale: `Google: ${unified.spesa_google.toFixed(0)} euro, Meta: ${unified.spesa_meta.toFixed(0)} euro`,
+      budget_consigliato: 'Sposta budget dalle campagne con verdetto "da_spegnere" o "critica" verso quelle "buona"',
+      motivazione: 'Concentrare il budget sulle campagne che convertono riduce il CPL medio'
+    } : null,
+    suggerimenti: azioni_immediate.map((a, idx) => ({ id: `sug_${idx}`, titolo: a.titolo, descrizione: a.descrizione })),
     fonte: getActiveSource(),
     ultimo_aggiornamento: new Date().toISOString()
   };
 }
 
-// GET /api/diagnosis - Diagnosi completa (problemi + suggerimenti)
+// GET /api/diagnosis - Diagnosi completa con competitor insights
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const unified = getUnifiedData();
-
-    // Dati da analizzare (reali o mock)
     const dataForAI = unified || buildMockUnified();
 
-    // Prova Gemini AI
     if (isGeminiAvailable()) {
-      const aiResult = await generateDiagnosis(dataForAI);
+      // Fetch competitor data (non blocca se fallisce)
+      const competitorData = await getCompetitorDataForDiagnosis();
+
+      const aiResult = await generateDiagnosis(dataForAI, competitorData);
       if (aiResult) {
         aiResult.fonte = unified ? getActiveSource() : 'demo';
         return res.json(aiResult);
