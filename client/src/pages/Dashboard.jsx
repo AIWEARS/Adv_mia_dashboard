@@ -13,9 +13,6 @@ import {
   Loader2,
   Upload,
   CheckCircle,
-  Trash2,
-  FileSpreadsheet,
-  X,
 } from 'lucide-react';
 import {
   getSummary,
@@ -25,10 +22,7 @@ import {
   getCompetitors,
   getTrackingHealth,
   toggleAction,
-  uploadGoogleCsv,
-  uploadMetaCsv,
   getCsvStatus,
-  deleteCsvData,
 } from '../utils/api';
 
 // Tab components
@@ -37,10 +31,12 @@ import TabDiagnosi from '../components/tabs/TabDiagnosi';
 import TabPiano from '../components/tabs/TabPiano';
 import TabCompetitor from '../components/tabs/TabCompetitor';
 import TabSalute from '../components/tabs/TabSalute';
+import TabPerformance from '../components/tabs/TabPerformance';
 import TabLeadPipeline from '../components/tabs/TabLeadPipeline';
 import TabCampagneOutreach from '../components/tabs/TabCampagneOutreach';
 
 const TABS = [
+  { id: 'performance', label: 'Performance ADV', icon: BarChart3 },
   { id: 'sintesi', label: 'Sintesi', icon: BarChart3 },
   { id: 'diagnosi', label: 'Cosa Migliorare', icon: AlertTriangle },
   { id: 'piano7', label: 'Piano 7 Giorni', icon: Calendar },
@@ -52,7 +48,7 @@ const TABS = [
 ];
 
 function Dashboard() {
-  const [activeTab, setActiveTab] = useState('sintesi');
+  const [activeTab, setActiveTab] = useState('performance');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -65,11 +61,8 @@ function Dashboard() {
   const [competitors, setCompetitors] = useState(null);
   const [trackingHealth, setTrackingHealth] = useState(null);
 
-  // CSV Upload
-  const [showUpload, setShowUpload] = useState(false);
+  // CSV Status (usato per header indicator)
   const [csvStatus, setCsvStatus] = useState(null);
-  const [uploading, setUploading] = useState({ google: false, meta: false });
-  const [uploadMsg, setUploadMsg] = useState('');
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -113,37 +106,6 @@ function Dashboard() {
     getCsvStatus().then(setCsvStatus).catch(() => {});
   }, []);
 
-  const handleUpload = async (platform, file) => {
-    if (!file) return;
-    setUploading((prev) => ({ ...prev, [platform]: true }));
-    setUploadMsg('');
-    try {
-      const uploadFn = platform === 'google' ? uploadGoogleCsv : uploadMetaCsv;
-      const result = await uploadFn(file);
-      setUploadMsg(result.message || 'Upload riuscito!');
-      const status = await getCsvStatus();
-      setCsvStatus(status);
-      // Ricarica dati dashboard con i nuovi CSV
-      loadData(true);
-    } catch (err) {
-      setUploadMsg(`Errore: ${err.message}`);
-    } finally {
-      setUploading((prev) => ({ ...prev, [platform]: false }));
-    }
-  };
-
-  const handleDeleteCsv = async () => {
-    try {
-      await deleteCsvData();
-      setUploadMsg('Dati CSV cancellati.');
-      const status = await getCsvStatus();
-      setCsvStatus(status);
-      loadData(true);
-    } catch (err) {
-      setUploadMsg(`Errore: ${err.message}`);
-    }
-  };
-
   const handleToggleAction = async (planType, actionId) => {
     try {
       const result = await toggleAction(planType, actionId);
@@ -169,6 +131,8 @@ function Dashboard() {
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'performance':
+        return <TabPerformance csvStatusData={csvStatus} onDataUpdate={() => { loadData(true); getCsvStatus().then(setCsvStatus).catch(() => {}); }} />;
       case 'sintesi':
         return <TabSintesi data={summary} />;
       case 'diagnosi':
@@ -211,14 +175,21 @@ function Dashboard() {
 
             {/* Azioni utente */}
             <div className="flex items-center gap-4">
+              {/* Indicatore dati caricati */}
+              {(csvStatus?.google?.importato || csvStatus?.meta?.importato) && (
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200">
+                  <CheckCircle className="w-3 h-3" />
+                  Dati: {[
+                    csvStatus?.google?.importato && 'Google',
+                    csvStatus?.meta?.importato && 'Meta'
+                  ].filter(Boolean).join(' + ')}
+                </div>
+              )}
+
               <button
-                onClick={() => setShowUpload((v) => !v)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-smooth ${
-                  showUpload
-                    ? 'bg-mia-blue text-white'
-                    : 'text-slate-500 hover:text-mia-blue hover:bg-slate-50'
-                }`}
-                title="Carica dati CSV"
+                onClick={() => setActiveTab('performance')}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-smooth text-slate-500 hover:text-mia-blue hover:bg-slate-50"
+                title="Vai a Performance ADV"
               >
                 <Upload className="w-4 h-4" />
                 <span className="hidden sm:inline">Carica CSV</span>
@@ -237,117 +208,7 @@ function Dashboard() {
         </div>
       </header>
 
-      {/* Pannello Upload CSV */}
-      {showUpload && (
-        <div className="bg-white border-b border-slate-200 animate-fade-in">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4" />
-                Importa Dati Campagne (CSV)
-              </h3>
-              <button
-                onClick={() => setShowUpload(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Google Ads Upload */}
-              <div className="border border-dashed border-slate-300 rounded-xl p-4 hover:border-mia-blue/50 transition-smooth">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
-                    <span className="text-blue-600 font-bold text-xs">G</span>
-                  </div>
-                  <span className="text-sm font-medium text-slate-700">Google Ads</span>
-                  {csvStatus?.google?.importato && (
-                    <CheckCircle className="w-4 h-4 text-mia-green ml-auto" />
-                  )}
-                </div>
-                {csvStatus?.google?.importato && (
-                  <p className="text-xs text-slate-400 mb-2">
-                    {csvStatus.google.campagne} campagne importate
-                  </p>
-                )}
-                <label className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg cursor-pointer transition-smooth text-sm text-slate-600">
-                  {uploading.google ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4" />
-                  )}
-                  {uploading.google ? 'Caricamento...' : 'Seleziona CSV'}
-                  <input
-                    type="file"
-                    accept=".csv"
-                    className="hidden"
-                    disabled={uploading.google}
-                    onChange={(e) => handleUpload('google', e.target.files[0])}
-                  />
-                </label>
-                <p className="text-xs text-slate-400 mt-2">
-                  Google Ads {'>'} Report {'>'} Campagne {'>'} Scarica CSV
-                </p>
-              </div>
-
-              {/* Meta Ads Upload */}
-              <div className="border border-dashed border-slate-300 rounded-xl p-4 hover:border-mia-blue/50 transition-smooth">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 bg-indigo-100 rounded flex items-center justify-center">
-                    <span className="text-indigo-600 font-bold text-xs">M</span>
-                  </div>
-                  <span className="text-sm font-medium text-slate-700">Meta Ads</span>
-                  {csvStatus?.meta?.importato && (
-                    <CheckCircle className="w-4 h-4 text-mia-green ml-auto" />
-                  )}
-                </div>
-                {csvStatus?.meta?.importato && (
-                  <p className="text-xs text-slate-400 mb-2">
-                    {csvStatus.meta.campagne} campagne importate
-                  </p>
-                )}
-                <label className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg cursor-pointer transition-smooth text-sm text-slate-600">
-                  {uploading.meta ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4" />
-                  )}
-                  {uploading.meta ? 'Caricamento...' : 'Seleziona CSV'}
-                  <input
-                    type="file"
-                    accept=".csv"
-                    className="hidden"
-                    disabled={uploading.meta}
-                    onChange={(e) => handleUpload('meta', e.target.files[0])}
-                  />
-                </label>
-                <p className="text-xs text-slate-400 mt-2">
-                  Gestione Inserzioni {'>'} Report {'>'} Esporta CSV
-                </p>
-              </div>
-            </div>
-
-            {/* Messaggi e azioni */}
-            <div className="flex items-center justify-between mt-3">
-              {uploadMsg && (
-                <p className={`text-sm ${uploadMsg.startsWith('Errore') ? 'text-red-500' : 'text-mia-green'}`}>
-                  {uploadMsg}
-                </p>
-              )}
-              {(csvStatus?.google?.importato || csvStatus?.meta?.importato) && (
-                <button
-                  onClick={handleDeleteCsv}
-                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-500 transition-smooth ml-auto"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Cancella dati importati
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Upload CSV ora integrato nel tab Performance ADV */}
 
       {/* Navigazione Tab */}
       <nav className="bg-white border-b border-slate-200 sticky top-16 z-40">

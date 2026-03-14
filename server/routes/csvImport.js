@@ -71,16 +71,34 @@ router.post('/google', upload.single('file'), (req, res) => {
       setActiveSource('csv');
     }
 
+    const spesaTotale = parsed.campaigns.reduce((sum, c) => sum + (c.cost || 0), 0);
+    const clickTotali = parsed.campaigns.reduce((sum, c) => sum + (c.clicks || 0), 0);
+    const impressioniTotali = parsed.campaigns.reduce((sum, c) => sum + (c.impressions || 0), 0);
+
     res.json({
       success: true,
       message: `Importate ${parsed.campaigns.length} campagne Google Ads`,
       summary: {
         campagne: parsed.campaigns.length,
-        spesa_totale: parsed.campaigns.reduce((sum, c) => sum + (c.cost || 0), 0),
-        click_totali: parsed.campaigns.reduce((sum, c) => sum + (c.clicks || 0), 0),
-        impressioni_totali: parsed.campaigns.reduce((sum, c) => sum + (c.impressions || 0), 0),
-        giorni_dati: parsed.daily?.length || 0
-      }
+        spesa_totale: spesaTotale,
+        click_totali: clickTotali,
+        impressioni_totali: impressioniTotali,
+        giorni_dati: parsed.daily?.length || 0,
+        periodo: parsed.periodo || null,
+        colonne_trovate: parsed.colonne_trovate || [],
+        righe_processate: parsed.righe_processate || 0,
+        righe_saltate: parsed.righe_saltate || 0
+      },
+      campaigns: parsed.campaigns.map(c => ({
+        nome: c.name,
+        spesa: c.cost,
+        click: c.clicks,
+        impressioni: c.impressions,
+        conversioni: c.conversions?.lead || 0,
+        ctr: c.impressions > 0 ? parseFloat((c.clicks / c.impressions * 100).toFixed(2)) : 0,
+        cpc: c.clicks > 0 ? parseFloat((c.cost / c.clicks).toFixed(2)) : 0,
+        cpl: (c.conversions?.lead || 0) > 0 ? parseFloat((c.cost / c.conversions.lead).toFixed(2)) : 0
+      }))
     });
   } catch (err) {
     console.error('[CSV Import] Errore import Google Ads:', err.message);
@@ -113,16 +131,37 @@ router.post('/meta', upload.single('file'), (req, res) => {
       setActiveSource('csv');
     }
 
+    const spesaTotale = parsed.campaigns.reduce((sum, c) => sum + (c.spend || 0), 0);
+    const clickTotali = parsed.campaigns.reduce((sum, c) => sum + (c.clicks || 0), 0);
+    const impressioniTotali = parsed.campaigns.reduce((sum, c) => sum + (c.impressions || 0), 0);
+
     res.json({
       success: true,
       message: `Importate ${parsed.campaigns.length} campagne Meta Ads`,
       summary: {
         campagne: parsed.campaigns.length,
-        spesa_totale: parsed.campaigns.reduce((sum, c) => sum + (c.spend || 0), 0),
-        click_totali: parsed.campaigns.reduce((sum, c) => sum + (c.clicks || 0), 0),
-        impressioni_totali: parsed.campaigns.reduce((sum, c) => sum + (c.impressions || 0), 0),
-        giorni_dati: parsed.daily?.length || 0
-      }
+        spesa_totale: spesaTotale,
+        click_totali: clickTotali,
+        impressioni_totali: impressioniTotali,
+        giorni_dati: parsed.daily?.length || 0,
+        periodo: parsed.periodo || null,
+        colonne_trovate: parsed.colonne_trovate || [],
+        righe_processate: parsed.righe_processate || 0,
+        righe_saltate: parsed.righe_saltate || 0
+      },
+      campaigns: parsed.campaigns.map(c => ({
+        nome: c.campaign_name,
+        spesa: c.spend,
+        click: c.clicks,
+        impressioni: c.impressions,
+        copertura: c.reach,
+        conversioni: c.actions?.lead || 0,
+        ctr: c.impressions > 0 ? parseFloat((c.clicks / c.impressions * 100).toFixed(2)) : 0,
+        cpc: c.clicks > 0 ? parseFloat((c.spend / c.clicks).toFixed(2)) : 0,
+        cpl: (c.actions?.lead || 0) > 0 ? parseFloat((c.spend / c.actions.lead).toFixed(2)) : 0,
+        frequenza: c.frequency_avg || 0,
+        cpm: c.cpm_avg || 0
+      }))
     });
   } catch (err) {
     console.error('[CSV Import] Errore import Meta Ads:', err.message);
@@ -138,18 +177,67 @@ router.get('/status', (req, res) => {
   const googleData = getCsvData('google');
   const metaData = getCsvData('meta');
 
+  const buildCampaignList = (data, platform) => {
+    if (!data?.campaigns) return [];
+    return data.campaigns.map(c => {
+      const isGoogle = platform === 'google';
+      const nome = isGoogle ? c.name : c.campaign_name;
+      const spesa = isGoogle ? (c.cost || 0) : (c.spend || 0);
+      const click = c.clicks || 0;
+      const impressioni = c.impressions || 0;
+      const conversioni = isGoogle ? (c.conversions?.lead || 0) : (c.actions?.lead || 0);
+      return {
+        nome,
+        piattaforma: isGoogle ? 'Google Ads' : 'Meta Ads',
+        spesa,
+        click,
+        impressioni,
+        conversioni,
+        ctr: impressioni > 0 ? parseFloat((click / impressioni * 100).toFixed(2)) : 0,
+        cpc: click > 0 ? parseFloat((spesa / click).toFixed(2)) : 0,
+        cpl: conversioni > 0 ? parseFloat((spesa / conversioni).toFixed(2)) : 0,
+        copertura: isGoogle ? 0 : (c.reach || 0),
+        frequenza: isGoogle ? 0 : (c.frequency_avg || 0),
+        cpm: isGoogle ? 0 : (c.cpm_avg || 0)
+      };
+    });
+  };
+
+  const googleCampaigns = buildCampaignList(googleData, 'google');
+  const metaCampaigns = buildCampaignList(metaData, 'meta');
+  const allCampaigns = [...googleCampaigns, ...metaCampaigns];
+
+  // Calcola totali
+  const totali = {
+    spesa: allCampaigns.reduce((s, c) => s + c.spesa, 0),
+    click: allCampaigns.reduce((s, c) => s + c.click, 0),
+    impressioni: allCampaigns.reduce((s, c) => s + c.impressioni, 0),
+    conversioni: allCampaigns.reduce((s, c) => s + c.conversioni, 0),
+  };
+  totali.ctr = totali.impressioni > 0 ? parseFloat((totali.click / totali.impressioni * 100).toFixed(2)) : 0;
+  totali.cpc = totali.click > 0 ? parseFloat((totali.spesa / totali.click).toFixed(2)) : 0;
+  totali.cpl = totali.conversioni > 0 ? parseFloat((totali.spesa / totali.conversioni).toFixed(2)) : 0;
+
   res.json({
     google: googleData ? {
       importato: true,
       campagne: googleData.campaigns?.length || 0,
-      spesa_totale: googleData.campaigns?.reduce((sum, c) => sum + (c.cost || 0), 0) || 0
+      spesa_totale: googleData.campaigns?.reduce((sum, c) => sum + (c.cost || 0), 0) || 0,
+      periodo: googleData.periodo || null
     } : { importato: false },
     meta: metaData ? {
       importato: true,
       campagne: metaData.campaigns?.length || 0,
-      spesa_totale: metaData.campaigns?.reduce((sum, c) => sum + (c.spend || 0), 0) || 0
+      spesa_totale: metaData.campaigns?.reduce((sum, c) => sum + (c.spend || 0), 0) || 0,
+      periodo: metaData.periodo || null
     } : { importato: false },
-    fonte_attiva: getActiveSource()
+    fonte_attiva: getActiveSource(),
+    campagne: allCampaigns,
+    totali,
+    dati_giornalieri: [
+      ...(googleData?.daily || []).map(d => ({ ...d, piattaforma: 'Google Ads', spend: d.cost })),
+      ...(metaData?.daily || []).map(d => ({ ...d, piattaforma: 'Meta Ads' }))
+    ].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
   });
 });
 
@@ -166,50 +254,141 @@ router.delete('/', (req, res) => {
   res.json({ success: true, message: 'Dati CSV cancellati. Fonte riportata a demo.' });
 });
 
+// ---------- HELPER: trova colonna con fuzzy matching ----------
+
+/**
+ * Cerca un valore in una riga CSV provando multiple varianti di nome colonna.
+ * Supporta anche matching case-insensitive e con/senza spazi.
+ */
+function findColumn(row, variants, defaultVal = null) {
+  // Prima prova match esatto
+  for (const v of variants) {
+    if (row[v] !== undefined && row[v] !== '') return row[v];
+  }
+  // Poi prova case-insensitive
+  const rowKeysLower = {};
+  for (const key of Object.keys(row)) {
+    rowKeysLower[key.toLowerCase().trim()] = key;
+  }
+  for (const v of variants) {
+    const realKey = rowKeysLower[v.toLowerCase().trim()];
+    if (realKey && row[realKey] !== undefined && row[realKey] !== '') return row[realKey];
+  }
+  return defaultVal;
+}
+
+function parseNumber(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  // Rimuovi simboli valuta, spazi, e gestisci virgola come decimale
+  const cleaned = String(val).replace(/[€$\s]/g, '').replace(/\./g, '').replace(',', '.');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
+function parseInt2(val) {
+  return Math.round(parseNumber(val));
+}
+
 // ---------- PARSER CSV ----------
 
 /**
  * Parse CSV da Google Ads
- * Colonne tipiche: Campaign, Cost, Clicks, Impressions, Conversions, Conv. value, Date, CTR
+ * Supporta TUTTE le varianti di export Google Ads:
+ * - Report campagne standard
+ * - Report personalizzati
+ * - Export in inglese e italiano
+ * - Con o senza intestazioni extra
  */
 function parseGoogleAdsCsv(content) {
-  // Rimuovi righe di intestazione Google Ads (iniziano con "Report" o sono vuote)
+  // Rimuovi righe di intestazione Google Ads (righe prima dell'header reale)
   const lines = content.split('\n');
   let startIndex = 0;
-  for (let i = 0; i < lines.length; i++) {
+  for (let i = 0; i < Math.min(lines.length, 20); i++) {
     const line = lines[i].trim().toLowerCase();
-    if (line.startsWith('campaign') || line.startsWith('"campaign') ||
-        line.startsWith('campagna') || line.startsWith('"campagna')) {
+    // Cerca la riga header che contiene nomi di colonna tipici
+    if (line.includes('campaign') || line.includes('campagna') ||
+        line.includes('cost') || line.includes('costo') ||
+        line.includes('clicks') || line.includes('clic')) {
       startIndex = i;
       break;
     }
   }
-  const cleanContent = lines.slice(startIndex).join('\n');
+  // Rimuovi anche righe di riepilogo alla fine (Google Ads aggiunge "Total" o righe vuote)
+  let endIndex = lines.length;
+  for (let i = lines.length - 1; i > startIndex; i--) {
+    const line = lines[i].trim().toLowerCase();
+    if (line === '' || line.startsWith('total') || line.startsWith('totale') || line.startsWith('"total')) {
+      endIndex = i;
+    } else {
+      break;
+    }
+  }
+  const cleanContent = lines.slice(startIndex, endIndex).join('\n');
 
   const records = parse(cleanContent, {
     columns: true,
     skip_empty_lines: true,
     trim: true,
-    relax_column_count: true
+    relax_column_count: true,
+    bom: true
   });
 
   if (records.length === 0) return null;
 
-  // Mappa colonne (supporta sia inglese che italiano)
+  // Log colonne trovate per debug
+  const foundColumns = Object.keys(records[0]);
+  console.log('[CSV Import] Google Ads - Colonne trovate:', foundColumns);
+
   const campaignMap = {};
   const dailyMap = {};
+  let skippedRows = 0;
+  let periodo = { inizio: null, fine: null };
 
   for (const row of records) {
-    const campaignName = row['Campaign'] || row['Campagna'] || row['campaign'] || 'Senza nome';
-    const cost = parseFloat(row['Cost'] || row['Costo'] || row['cost'] || 0);
-    const clicks = parseInt(row['Clicks'] || row['Clic'] || row['clicks'] || 0);
-    const impressions = parseInt(row['Impressions'] || row['Impressioni'] || row['impr.'] || 0);
-    const conversions = parseFloat(row['Conversions'] || row['Conversioni'] || row['conversions'] || 0);
-    const convValue = parseFloat(row['Conv. value'] || row['Valore conv.'] || row['conv_value'] || 0);
-    const date = row['Day'] || row['Date'] || row['Giorno'] || row['Data'] || null;
+    const campaignName = findColumn(row, [
+      'Campaign', 'Campagna', 'campaign', 'Campaign name', 'Nome campagna',
+      'campaign_name', 'Campaign Name', 'Nom de la campagne'
+    ], null);
 
-    // Totale non necessario come campagna
+    if (!campaignName) { skippedRows++; continue; }
     if (campaignName.toLowerCase() === 'total' || campaignName.toLowerCase() === 'totale') continue;
+
+    const cost = parseNumber(findColumn(row, [
+      'Cost', 'Costo', 'cost', 'Spend', 'Amount', 'Budget spent',
+      'Costo totale', 'Cost / conv.', 'Avg. cost'
+    ], 0));
+    const clicks = parseInt2(findColumn(row, [
+      'Clicks', 'Clic', 'clicks', 'Click', 'Clic totali', 'Total clicks'
+    ], 0));
+    const impressions = parseInt2(findColumn(row, [
+      'Impressions', 'Impressioni', 'impr.', 'Impr.', 'impressions',
+      'Impression', 'Views', 'Visualizzazioni'
+    ], 0));
+    const conversions = parseNumber(findColumn(row, [
+      'Conversions', 'Conversioni', 'conversions', 'Conv.', 'conv.',
+      'All conv.', 'Tutte le conv.', 'Conversion', 'Risultati'
+    ], 0));
+    const convValue = parseNumber(findColumn(row, [
+      'Conv. value', 'Valore conv.', 'conv_value', 'Conversion value',
+      'Valore conversione', 'All conv. value', 'Revenue', 'Fatturato'
+    ], 0));
+    const ctr = parseNumber(findColumn(row, [
+      'CTR', 'ctr', 'Click-through rate', 'Percentuale di clic'
+    ], 0));
+    const avgCpc = parseNumber(findColumn(row, [
+      'Avg. CPC', 'CPC medio', 'CPC', 'cpc', 'Avg. cost per click',
+      'Costo medio per clic'
+    ], 0));
+    const date = findColumn(row, [
+      'Day', 'Date', 'Giorno', 'Data', 'Reporting starts',
+      'Start date', 'Data inizio', 'Jour'
+    ], null);
+
+    // Traccia periodo
+    if (date) {
+      if (!periodo.inizio || date < periodo.inizio) periodo.inizio = date;
+      if (!periodo.fine || date > periodo.fine) periodo.fine = date;
+    }
 
     // Aggrega per campagna
     if (!campaignMap[campaignName]) {
@@ -217,7 +396,7 @@ function parseGoogleAdsCsv(content) {
         name: campaignName,
         cost: 0, clicks: 0, impressions: 0,
         conversions: { lead: 0, go_to_app: 0 },
-        convValue: 0
+        convValue: 0, ctr_raw: [], cpc_raw: []
       };
     }
     campaignMap[campaignName].cost += cost;
@@ -225,6 +404,8 @@ function parseGoogleAdsCsv(content) {
     campaignMap[campaignName].impressions += impressions;
     campaignMap[campaignName].conversions.lead += Math.round(conversions);
     campaignMap[campaignName].convValue += convValue;
+    if (ctr > 0) campaignMap[campaignName].ctr_raw.push(ctr);
+    if (avgCpc > 0) campaignMap[campaignName].cpc_raw.push(avgCpc);
 
     // Aggrega per giorno
     if (date) {
@@ -238,15 +419,32 @@ function parseGoogleAdsCsv(content) {
     }
   }
 
+  // Cleanup: rimuovi campi raw usati solo per aggregazione
+  const campaigns = Object.values(campaignMap).map(c => {
+    const { ctr_raw, cpc_raw, ...rest } = c;
+    return rest;
+  });
+
+  if (campaigns.length === 0) return null;
+
   return {
-    campaigns: Object.values(campaignMap),
-    daily: Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date))
+    campaigns,
+    daily: Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date)),
+    periodo,
+    colonne_trovate: foundColumns,
+    righe_processate: records.length,
+    righe_saltate: skippedRows
   };
 }
 
 /**
- * Parse CSV da Meta Ads (Gestione Inserzioni)
- * Colonne tipiche: Campaign name, Amount spent, Link clicks, Impressions, Results, Reach, Date
+ * Parse CSV da Meta Ads (Gestione Inserzioni / Ads Manager)
+ * Supporta TUTTE le varianti di export Meta:
+ * - Export da Gestione Inserzioni (italiano)
+ * - Export da Ads Manager (inglese)
+ * - Report personalizzati
+ * - Export con BOM UTF-8
+ * - Colonne a livello campagna, gruppo inserzioni, inserzione
  */
 function parseMetaAdsCsv(content) {
   const records = parse(content, {
@@ -254,38 +452,92 @@ function parseMetaAdsCsv(content) {
     skip_empty_lines: true,
     trim: true,
     relax_column_count: true,
-    bom: true // Meta spesso include BOM UTF-8
+    bom: true
   });
 
   if (records.length === 0) return null;
 
+  const foundColumns = Object.keys(records[0]);
+  console.log('[CSV Import] Meta Ads - Colonne trovate:', foundColumns);
+
   const campaignMap = {};
   const dailyMap = {};
+  let skippedRows = 0;
+  let periodo = { inizio: null, fine: null };
 
   for (const row of records) {
-    const campaignName = row['Campaign name'] || row['Nome campagna'] ||
-                         row['campaign_name'] || row['Campaign Name'] || 'Senza nome';
-    const spend = parseFloat(row['Amount spent (EUR)'] || row['Amount spent'] ||
-                             row['Importo speso (EUR)'] || row['Importo speso'] ||
-                             row['spend'] || 0);
-    const clicks = parseInt(row['Link clicks'] || row['Clic sul link'] ||
-                           row['link_clicks'] || row['Clicks (all)'] ||
-                           row['Clic (tutti)'] || 0);
-    const impressions = parseInt(row['Impressions'] || row['Impressioni'] ||
-                                row['impressions'] || 0);
-    const results = parseInt(row['Results'] || row['Risultati'] || row['results'] || 0);
-    const reach = parseInt(row['Reach'] || row['Copertura'] || row['reach'] || 0);
-    const date = row['Day'] || row['Date'] || row['Giorno'] || row['Reporting starts'] ||
-                 row['Inizio report'] || null;
+    const campaignName = findColumn(row, [
+      'Campaign name', 'Nome campagna', 'campaign_name', 'Campaign Name',
+      'Nome della campagna', 'Campagna', 'campaign', 'Nom de la campagne',
+      'Ad set name', 'Nome gruppo di inserzioni', // fallback a ad set se non c'e' campagna
+      'Ad name', 'Nome inserzione' // ultimo fallback
+    ], null);
 
+    if (!campaignName) { skippedRows++; continue; }
     if (campaignName.toLowerCase() === 'total' || campaignName.toLowerCase() === 'totale') continue;
+
+    const spend = parseNumber(findColumn(row, [
+      'Amount spent (EUR)', 'Amount spent', 'Importo speso (EUR)', 'Importo speso',
+      'spend', 'Spend', 'Cost', 'Costo', 'Amount Spent (EUR)',
+      'Importo speso (€)', 'Total spend', 'Spesa totale',
+      'Amount spent (USD)', 'Amount spent (GBP)'
+    ], 0));
+    const clicks = parseInt2(findColumn(row, [
+      'Link clicks', 'Clic sul link', 'link_clicks', 'Clicks (all)',
+      'Clic (tutti)', 'clicks', 'Click', 'Clic', 'Click sul link',
+      'Outbound clicks', 'Clic in uscita', 'Website clicks'
+    ], 0));
+    const impressions = parseInt2(findColumn(row, [
+      'Impressions', 'Impressioni', 'impressions', 'Impression',
+      'Visualizzazioni', 'Views'
+    ], 0));
+    const results = parseInt2(findColumn(row, [
+      'Results', 'Risultati', 'results', 'Leads', 'Lead',
+      'Conversions', 'Conversioni', 'Actions', 'Azioni',
+      'Website registrations completed', 'Registrazioni completate',
+      'Purchases', 'Acquisti'
+    ], 0));
+    const reach = parseInt2(findColumn(row, [
+      'Reach', 'Copertura', 'reach', 'People reached', 'Persone raggiunte'
+    ], 0));
+    const ctr = parseNumber(findColumn(row, [
+      'CTR (link click-through rate)', 'CTR (percentuale di clic sul link)',
+      'CTR (all)', 'CTR (tutti)', 'CTR', 'ctr',
+      'Link click-through rate', 'Percentuale di clic sul link'
+    ], 0));
+    const cpc = parseNumber(findColumn(row, [
+      'CPC (cost per link click)', 'CPC (costo per clic sul link)',
+      'CPC (all)', 'CPC (tutti)', 'CPC', 'cpc',
+      'Cost per link click', 'Costo per clic sul link',
+      'Cost per result', 'Costo per risultato'
+    ], 0));
+    const cpm = parseNumber(findColumn(row, [
+      'CPM (cost per 1,000 impressions)', 'CPM (costo per 1.000 impressioni)',
+      'CPM', 'cpm'
+    ], 0));
+    const frequency = parseNumber(findColumn(row, [
+      'Frequency', 'Frequenza', 'frequency'
+    ], 0));
+    const date = findColumn(row, [
+      'Day', 'Date', 'Giorno', 'Reporting starts', 'Inizio report',
+      'Data', 'Start date', 'Data inizio', 'Reporting start',
+      'Inizio reportistica'
+    ], null);
+
+    // Traccia periodo
+    if (date) {
+      if (!periodo.inizio || date < periodo.inizio) periodo.inizio = date;
+      if (!periodo.fine || date > periodo.fine) periodo.fine = date;
+    }
 
     // Aggrega per campagna
     if (!campaignMap[campaignName]) {
       campaignMap[campaignName] = {
         campaign_name: campaignName,
         spend: 0, clicks: 0, impressions: 0, reach: 0,
-        actions: { lead: 0, link_click: 0 }
+        actions: { lead: 0, link_click: 0 },
+        frequency_sum: 0, frequency_count: 0,
+        cpm_sum: 0, cpm_count: 0
       };
     }
     campaignMap[campaignName].spend += spend;
@@ -294,6 +546,14 @@ function parseMetaAdsCsv(content) {
     campaignMap[campaignName].reach += reach;
     campaignMap[campaignName].actions.lead += results;
     campaignMap[campaignName].actions.link_click += clicks;
+    if (frequency > 0) {
+      campaignMap[campaignName].frequency_sum += frequency;
+      campaignMap[campaignName].frequency_count++;
+    }
+    if (cpm > 0) {
+      campaignMap[campaignName].cpm_sum += cpm;
+      campaignMap[campaignName].cpm_count++;
+    }
 
     // Aggrega per giorno
     if (date) {
@@ -307,9 +567,25 @@ function parseMetaAdsCsv(content) {
     }
   }
 
+  // Cleanup e calcola medie
+  const campaigns = Object.values(campaignMap).map(c => {
+    const { frequency_sum, frequency_count, cpm_sum, cpm_count, ...rest } = c;
+    return {
+      ...rest,
+      frequency_avg: frequency_count > 0 ? parseFloat((frequency_sum / frequency_count).toFixed(2)) : 0,
+      cpm_avg: cpm_count > 0 ? parseFloat((cpm_sum / cpm_count).toFixed(2)) : 0
+    };
+  });
+
+  if (campaigns.length === 0) return null;
+
   return {
-    campaigns: Object.values(campaignMap),
-    daily: Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date))
+    campaigns,
+    daily: Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date)),
+    periodo,
+    colonne_trovate: foundColumns,
+    righe_processate: records.length,
+    righe_saltate: skippedRows
   };
 }
 

@@ -35,6 +35,7 @@ const CACHE_TTL_DIAGNOSIS = 5 * 60 * 1000;     // 5 minuti
 const CACHE_TTL_ACTION_PLAN = 10 * 60 * 1000;  // 10 minuti
 const CACHE_TTL_COMPETITORS = 60 * 60 * 1000;  // 1 ora
 const CACHE_TTL_SOCIAL_ANALYSIS = 2 * 60 * 60 * 1000; // 2 ore
+const CACHE_TTL_PED_MIA = 4 * 60 * 60 * 1000; // 4 ore
 
 function getCached(key) {
   const entry = cache.get(key);
@@ -104,67 +105,177 @@ function extractJson(text) {
 // DIAGNOSI AI
 // ============================================================
 
-export async function generateDiagnosis(unifiedData) {
-  const cacheKey = `diagnosis_${simpleHash(unifiedData)}`;
+export async function generateDiagnosis(unifiedData, competitorData = null) {
+  const cacheKey = `diagnosis_v2_${simpleHash(unifiedData)}_${competitorData ? simpleHash(competitorData) : 'nocomp'}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
   const ai = getClient();
   if (!ai) return null;
 
-  const prompt = `Sei un esperto di advertising digitale specializzato in Google Ads e Meta Ads.
-Analizza i dati delle campagne pubblicitarie di MIA (itsmia.it).
+  // Prepara sezione competitor per il prompt
+  let competitorSection = '';
+  if (competitorData) {
+    competitorSection = `
 
-DATI CAMPAGNE:
+ANALISI COMPETITOR GIA' EFFETTUATA:
+${competitorData.competitors ? competitorData.competitors.map(c => `- ${c.nome} (${c.dominio}): ${c.descrizione || ''}
+  Punti di forza: ${(c.punti_forza || []).join(', ')}
+  Punti deboli: ${(c.punti_deboli || []).join(', ')}
+  Comunicazione: ${c.comunicazione || 'N/A'}
+  Creativita: ${c.creativita || 'N/A'}`).join('\n') : 'Nessun competitor analizzato'}
+
+COSA I COMPETITOR FANNO MEGLIO DI MIA:
+${(competitorData.cose_che_fanno_meglio || []).map((c, i) => `${i + 1}. ${c}`).join('\n') || 'Non disponibile'}
+
+OPPORTUNITA PER DIFFERENZIARSI:
+${(competitorData.opportunita_per_differenziarsi || []).map((o, i) => `${i + 1}. ${o}`).join('\n') || 'Non disponibile'}
+
+IDEE ANNUNCI DAI COMPETITOR:
+${(competitorData.idee_annunci || []).map(i => `- "${i.copy}" (angolo: ${i.angolo}, formato: ${i.formato})`).join('\n') || 'Non disponibile'}`;
+  }
+
+  // Calcola metriche aggregate per il prompt
+  const totalSpend = unifiedData.spesa_totale || 0;
+  const totalClicks = unifiedData.click_totali || 0;
+  const totalImpressions = unifiedData.impressioni_totali || 0;
+  const totalLeads = unifiedData.conversioni?.lead_preventivo || 0;
+  const cpl = totalLeads > 0 ? (totalSpend / totalLeads).toFixed(2) : 'N/A (0 lead)';
+  const ctr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : '0';
+  const cpc = totalClicks > 0 ? (totalSpend / totalClicks).toFixed(2) : 'N/A';
+
+  const prompt = `Sei un consulente senior di advertising digitale specializzato in SaaS B2B. Devi analizzare i dati REALI delle campagne di MIA e fornire un'analisi IMPIETOSA e CONCRETA.
+
+=== DATI CAMPAGNE REALI ===
 ${JSON.stringify(unifiedData, null, 2)}
 
-CONTESTO BUSINESS:
-- MIA (itsmia.it) e' una piattaforma AI di shooting digitale per fashion e-commerce
-- Genera foto professionali di modelle che indossano capi di abbigliamento usando AI generativa
-- Target: fashion retailer e aziende e-commerce che necessitano di visual per cataloghi prodotto
-- Due modalita: Self-service (utente crea da solo) e Tailor (MIA gestisce tutto)
-- Webapp: app.miafashion.it (piattaforma di creazione contenuti)
-- Azienda: AISEM SRL, Milano, fondata 2023
+=== METRICHE AGGREGATE (calcolate dai dati) ===
+- Spesa totale: ${totalSpend} euro
+- Click totali: ${totalClicks}
+- Impressioni totali: ${totalImpressions}
+- Lead totali: ${totalLeads}
+- CPL: ${cpl} euro
+- CTR: ${ctr}%
+- CPC: ${cpc} euro
+
+=== CONTESTO BUSINESS MIA ===
+- MIA (itsmia.it) = piattaforma AI di shooting digitale per fashion e-commerce
+- Genera foto professionali di modelle con AI generativa
+- Target: fashion retailer e aziende e-commerce (B2B)
+- Webapp: app.miafashion.it
 - Funnel: Annuncio > Landing (itsmia.it) > Webapp > Registrazione > Acquisto/Abbonamento
-- Benchmark settore SaaS/AI tools B2B: CPL 50-150 euro, CTR > 1.5%
+
+=== BENCHMARK DI RIFERIMENTO (SaaS B2B / AI Tools) ===
+- CTR Google Search: benchmark 3-5%, accettabile >2%, critico <1%
+- CTR Meta Ads: benchmark 1-2%, accettabile >0.8%, critico <0.5%
+- CPC Google Search: benchmark 2-5 euro, buono <2 euro, alto >5 euro
+- CPC Meta: benchmark 0.50-2 euro, buono <1 euro, alto >3 euro
+- CPL (costo per lead): benchmark 50-100 euro, accettabile <150 euro, critico >200 euro
+- CR landing page: benchmark 3-5%, minimo accettabile 2%
+- Frequenza Meta: ideale 1.5-3, troppo alta >4 (ad fatigue)
+- CPM Meta: benchmark 5-15 euro, alto >20 euro
+${competitorSection}
+
+=== ISTRUZIONI PER L'ANALISI ===
+
+Analizza OGNI SINGOLA CAMPAGNA e l'insieme dei dati. Per ogni metrica indica CHIARAMENTE:
+- Il valore attuale
+- Il benchmark di riferimento
+- Se e' buono, nella media, o critico
+- COSA FARE CONCRETAMENTE per migliorarlo
+
+NON dare consigli generici tipo "migliora il targeting" o "ottimizza le creativita".
+DA' istruzioni OPERATIVE tipo:
+- "Il CTR di questa campagna e' 0.5%, cioe' MENO DELLA META del benchmark (1-2%). Questo significa che le persone vedono l'annuncio ma non cliccano. Devi: 1) Cambiare la headline con un gancio numerico es. 'Riduci del 90% i costi di shooting' 2) Testare 3 varianti di immagine con before/after 3) Restringere il pubblico ai soli decision maker fashion"
 
 RISPONDI IN ITALIANO con questo formato JSON esatto:
 {
-  "issues": [
+  "analisi_campagne": [
     {
-      "id": "stringa_identificativa_unica",
-      "area": "area del problema (creativita, budget, conversioni, funnel, targeting)",
-      "titolo": "titolo breve e chiaro",
-      "gravita": "alta|media|critica",
-      "descrizione": "spiegazione dettagliata con numeri specifici dai dati",
-      "impatto": "quale impatto ha sui risultati",
-      "azione": "azione concreta e specifica per risolvere"
+      "nome_campagna": "nome esatto della campagna dai dati",
+      "piattaforma": "Google Ads o Meta Ads",
+      "verdetto": "buona|da_ottimizzare|critica|da_spegnere",
+      "metriche": {
+        "spesa": 0,
+        "click": 0,
+        "impressioni": 0,
+        "ctr": 0,
+        "cpc": 0,
+        "conversioni": 0,
+        "cpl": 0
+      },
+      "confronto_benchmark": "CTR X% vs benchmark Y% = SOPRA/SOTTO media. CPC X euro vs benchmark Y euro = OK/ALTO. CPL X euro vs obiettivo <100 euro = OK/CRITICO",
+      "problemi": ["problema specifico con NUMERI: 'CTR 0.3% = 6x sotto benchmark 2%'", "altro problema con dati"],
+      "cosa_fare": ["azione OPERATIVA specifica: 'Vai su Google Ads > Campagna X > Annunci > Crea variante con headline: ...'", "altra azione con step precisi"]
     }
   ],
-  "suggerimenti": [
+  "issues": [
     {
-      "id": "stringa_identificativa",
-      "titolo": "titolo del suggerimento",
-      "descrizione": "spiegazione dettagliata"
+      "id": "id_unico",
+      "area": "creativita|budget|conversioni|funnel|targeting|landing_page|copy",
+      "titolo": "titolo breve e diretto",
+      "gravita": "critica|alta|media",
+      "descrizione": "descrizione con NUMERI SPECIFICI dai dati e confronto con benchmark",
+      "impatto": "impatto economico: 'Stai sprecando X euro/mese perche...' oppure 'Potresti ottenere X lead in piu se...'",
+      "azione": "STEP OPERATIVI numerati:\n1. Apri Google/Meta Ads\n2. Vai su...\n3. Modifica...\n4. Risultato atteso: ..."
     }
-  ]
+  ],
+  "da_competitor": [
+    {
+      "id": "comp_insight_1",
+      "competitor": "nome del competitor",
+      "cosa_fanno": "cosa fa il competitor CONCRETAMENTE (es: 'usano video before/after negli annunci Meta con hook nei primi 3 secondi')",
+      "come_applicarlo": "COME MIA puo copiare questa strategia: step 1, step 2, step 3",
+      "priorita": "alta|media|bassa",
+      "tipo": "copy|creativita|targeting|formato|landing|offerta"
+    }
+  ],
+  "azioni_immediate": [
+    {
+      "id": "azione_1",
+      "titolo": "titolo azione chiaro e specifico",
+      "descrizione": "COSA FARE passo per passo. Esempio: 'Apri Meta Ads Manager > Vai sulla campagna X > Duplicala > Nel duplicato cambia: 1) Pubblico: restringi a...' 2) Copy: usa headline...'",
+      "tempo_stimato": "30 min|1 ora|2 ore|mezza giornata",
+      "impatto_atteso": "risultato numerico atteso: 'CTR atteso +50%, risparmio stimato X euro/mese'",
+      "priorita": "alta|media|bassa"
+    }
+  ],
+  "copy_suggeriti": [
+    {
+      "id": "copy_1",
+      "titolo_annuncio": "headline PRONTA da copiare e incollare",
+      "descrizione_annuncio": "description PRONTA da copiare e incollare",
+      "angolo": "angolo comunicativo (risparmio|qualita|velocita|tecnologia|social_proof)",
+      "piattaforma": "Google Ads|Meta Ads|Entrambe",
+      "formato": "search|display|video|carosello|story|reel",
+      "perche_funziona": "spiegazione breve di perche questo copy dovrebbe convertire meglio"
+    }
+  ],
+  "budget_consiglio": {
+    "budget_attuale": "distribuzione attuale con numeri: 'Google: X euro (Y%), Meta: Z euro (W%)'",
+    "budget_consigliato": "nuova distribuzione con motivazione numerica",
+    "motivazione": "basata sui dati: 'La campagna X su Google ha CPL Y, mentre su Meta ha CPL Z, quindi...'",
+    "risparmio_stimato": "quanto si puo risparmiare o quanti lead in piu ottenere"
+  }
 }
 
-Regole:
-- Genera 3-7 issues basate sui dati reali (non inventare numeri)
-- Genera 3-5 suggerimenti pratici e specifici per il settore AI SaaS/fashion tech
-- Usa gravita "critica" solo per problemi gravi (zero lead, budget sprecato)
-- Usa gravita "alta" per problemi importanti (CPL troppo alto, CTR basso)
-- Usa gravita "media" per miglioramenti possibili
-- Sii specifico: cita i numeri dai dati forniti
-- Le azioni devono essere concrete e attuabili, non generiche`;
+REGOLE CRITICHE:
+- analisi_campagne: analizza OGNI singola campagna. Il campo "confronto_benchmark" deve avere numeri reali vs benchmark
+- issues: 3-7 problemi REALI. Mai generico. Sempre con numeri dai dati e confronto benchmark
+- da_competitor: 3-6 insight CONCRETI (se competitor data disponibile). Con step operativi
+- azioni_immediate: 5-8 azioni ordinate per priorita. Ogni azione deve essere un TUTORIAL operativo
+- copy_suggeriti: 3-5 copy PRONTI ALL'USO, con headline e description complete, non abbozzi
+- budget_consiglio: con numeri specifici e risparmio stimato
+- OGNI dato che citi deve venire dalla tabella dati fornita, MAI inventare numeri
+- Se una campagna ha speso soldi senza conversioni, il verdetto DEVE essere "da_spegnere" o "critica"
+- Se il CPL e' sopra 200 euro, e' CRITICO. Se e' sopra 150 euro e' da_ottimizzare. Se e' sotto 80 euro e' buono`;
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        thinkingConfig: { thinkingLevel: 'MEDIUM' },
+        thinkingConfig: { thinkingLevel: 'HIGH' },
         responseMimeType: 'application/json'
       }
     });
@@ -181,11 +292,29 @@ Regole:
 
 function validateDiagnosisResponse(parsed) {
   const result = {
+    analisi_campagne: [],
     issues: [],
-    suggerimenti: [],
+    da_competitor: [],
+    azioni_immediate: [],
+    copy_suggeriti: [],
+    budget_consiglio: null,
     fonte: 'ai',
     ultimo_aggiornamento: new Date().toISOString()
   };
+
+  if (Array.isArray(parsed.analisi_campagne)) {
+    result.analisi_campagne = parsed.analisi_campagne
+      .filter(c => c.nome_campagna)
+      .map((camp, idx) => ({
+        nome_campagna: String(camp.nome_campagna),
+        piattaforma: String(camp.piattaforma || ''),
+        verdetto: ['buona', 'da_ottimizzare', 'critica', 'da_spegnere'].includes(camp.verdetto) ? camp.verdetto : 'da_ottimizzare',
+        metriche: camp.metriche || {},
+        confronto_benchmark: String(camp.confronto_benchmark || ''),
+        problemi: Array.isArray(camp.problemi) ? camp.problemi.map(String) : [],
+        cosa_fare: Array.isArray(camp.cosa_fare) ? camp.cosa_fare.map(String) : []
+      }));
+  }
 
   if (Array.isArray(parsed.issues)) {
     result.issues = parsed.issues
@@ -201,15 +330,61 @@ function validateDiagnosisResponse(parsed) {
       }));
   }
 
-  if (Array.isArray(parsed.suggerimenti)) {
-    result.suggerimenti = parsed.suggerimenti
-      .filter(s => s.titolo && s.descrizione)
-      .map((sug, idx) => ({
-        id: sug.id || `ai_sug_${idx}`,
-        titolo: String(sug.titolo),
-        descrizione: String(sug.descrizione)
+  if (Array.isArray(parsed.da_competitor)) {
+    result.da_competitor = parsed.da_competitor
+      .filter(c => c.cosa_fanno && c.come_applicarlo)
+      .map((comp, idx) => ({
+        id: comp.id || `comp_insight_${idx}`,
+        competitor: String(comp.competitor || ''),
+        cosa_fanno: String(comp.cosa_fanno),
+        come_applicarlo: String(comp.come_applicarlo),
+        priorita: ['alta', 'media', 'bassa'].includes(comp.priorita) ? comp.priorita : 'media',
+        tipo: String(comp.tipo || 'generale')
       }));
   }
+
+  if (Array.isArray(parsed.azioni_immediate)) {
+    result.azioni_immediate = parsed.azioni_immediate
+      .filter(a => a.titolo && a.descrizione)
+      .map((action, idx) => ({
+        id: action.id || `azione_${idx}`,
+        titolo: String(action.titolo),
+        descrizione: String(action.descrizione),
+        tempo_stimato: String(action.tempo_stimato || '1 ora'),
+        impatto_atteso: String(action.impatto_atteso || ''),
+        priorita: ['alta', 'media', 'bassa'].includes(action.priorita) ? action.priorita : 'media'
+      }));
+  }
+
+  if (Array.isArray(parsed.copy_suggeriti)) {
+    result.copy_suggeriti = parsed.copy_suggeriti
+      .filter(c => c.titolo_annuncio)
+      .map((copy, idx) => ({
+        id: copy.id || `copy_${idx}`,
+        titolo_annuncio: String(copy.titolo_annuncio),
+        descrizione_annuncio: String(copy.descrizione_annuncio || ''),
+        angolo: String(copy.angolo || ''),
+        piattaforma: String(copy.piattaforma || 'Entrambe'),
+        formato: String(copy.formato || 'search'),
+        perche_funziona: String(copy.perche_funziona || '')
+      }));
+  }
+
+  if (parsed.budget_consiglio) {
+    result.budget_consiglio = {
+      budget_attuale: String(parsed.budget_consiglio.budget_attuale || ''),
+      budget_consigliato: String(parsed.budget_consiglio.budget_consigliato || ''),
+      motivazione: String(parsed.budget_consiglio.motivazione || ''),
+      risparmio_stimato: String(parsed.budget_consiglio.risparmio_stimato || '')
+    };
+  }
+
+  // Backward compatibility: generate suggerimenti from azioni_immediate
+  result.suggerimenti = result.azioni_immediate.map((a, idx) => ({
+    id: `sug_${idx}`,
+    titolo: a.titolo,
+    descrizione: a.descrizione
+  }));
 
   return result;
 }

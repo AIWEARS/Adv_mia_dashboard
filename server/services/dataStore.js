@@ -40,7 +40,8 @@ let store = {
   csvData: {
     googleAds: null,
     metaAds: null,
-    lastImport: null
+    lastImport: null,
+    importHistory: [] // Storico delle importazioni
   },
 
   // Dati API (ultima sincronizzazione)
@@ -167,7 +168,22 @@ export function setCsvData(platform, data) {
   } else if (platform === 'meta') {
     store.csvData.metaAds = data;
   }
-  store.csvData.lastImport = new Date().toISOString();
+  const now = new Date().toISOString();
+  store.csvData.lastImport = now;
+
+  // Aggiungi allo storico (max 20 entries)
+  if (data) {
+    if (!store.csvData.importHistory) store.csvData.importHistory = [];
+    store.csvData.importHistory.push({
+      platform,
+      timestamp: now,
+      campaigns: data.campaigns?.length || 0,
+      periodo: data.periodo || null
+    });
+    if (store.csvData.importHistory.length > 20) {
+      store.csvData.importHistory = store.csvData.importHistory.slice(-20);
+    }
+  }
   saveStore();
 }
 
