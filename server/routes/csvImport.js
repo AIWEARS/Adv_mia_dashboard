@@ -89,16 +89,7 @@ router.post('/google', upload.single('file'), (req, res) => {
         righe_processate: parsed.righe_processate || 0,
         righe_saltate: parsed.righe_saltate || 0
       },
-      campaigns: parsed.campaigns.map(c => ({
-        nome: c.name,
-        spesa: c.cost,
-        click: c.clicks,
-        impressioni: c.impressions,
-        conversioni: c.conversions?.lead || 0,
-        ctr: c.impressions > 0 ? parseFloat((c.clicks / c.impressions * 100).toFixed(2)) : 0,
-        cpc: c.clicks > 0 ? parseFloat((c.cost / c.clicks).toFixed(2)) : 0,
-        cpl: (c.conversions?.lead || 0) > 0 ? parseFloat((c.cost / c.conversions.lead).toFixed(2)) : 0
-      }))
+      csvStatus: buildFullStatus()
     });
   } catch (err) {
     console.error('[CSV Import] Errore import Google Ads:', err.message);
@@ -149,19 +140,7 @@ router.post('/meta', upload.single('file'), (req, res) => {
         righe_processate: parsed.righe_processate || 0,
         righe_saltate: parsed.righe_saltate || 0
       },
-      campaigns: parsed.campaigns.map(c => ({
-        nome: c.campaign_name,
-        spesa: c.spend,
-        click: c.clicks,
-        impressioni: c.impressions,
-        copertura: c.reach,
-        conversioni: c.actions?.lead || 0,
-        ctr: c.impressions > 0 ? parseFloat((c.clicks / c.impressions * 100).toFixed(2)) : 0,
-        cpc: c.clicks > 0 ? parseFloat((c.spend / c.clicks).toFixed(2)) : 0,
-        cpl: (c.actions?.lead || 0) > 0 ? parseFloat((c.spend / c.actions.lead).toFixed(2)) : 0,
-        frequenza: c.frequency_avg || 0,
-        cpm: c.cpm_avg || 0
-      }))
+      csvStatus: buildFullStatus()
     });
   } catch (err) {
     console.error('[CSV Import] Errore import Meta Ads:', err.message);
@@ -173,7 +152,7 @@ router.post('/meta', upload.single('file'), (req, res) => {
  * GET /api/csv-import/status
  * Stato attuale dell'importazione CSV
  */
-router.get('/status', (req, res) => {
+function buildFullStatus() {
   const googleData = getCsvData('google');
   const metaData = getCsvData('meta');
 
@@ -207,7 +186,6 @@ router.get('/status', (req, res) => {
   const metaCampaigns = buildCampaignList(metaData, 'meta');
   const allCampaigns = [...googleCampaigns, ...metaCampaigns];
 
-  // Calcola totali
   const totali = {
     spesa: allCampaigns.reduce((s, c) => s + c.spesa, 0),
     click: allCampaigns.reduce((s, c) => s + c.click, 0),
@@ -218,7 +196,7 @@ router.get('/status', (req, res) => {
   totali.cpc = totali.click > 0 ? parseFloat((totali.spesa / totali.click).toFixed(2)) : 0;
   totali.cpl = totali.conversioni > 0 ? parseFloat((totali.spesa / totali.conversioni).toFixed(2)) : 0;
 
-  res.json({
+  return {
     google: googleData ? {
       importato: true,
       campagne: googleData.campaigns?.length || 0,
@@ -238,7 +216,11 @@ router.get('/status', (req, res) => {
       ...(googleData?.daily || []).map(d => ({ ...d, piattaforma: 'Google Ads', spend: d.cost })),
       ...(metaData?.daily || []).map(d => ({ ...d, piattaforma: 'Meta Ads' }))
     ].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-  });
+  };
+}
+
+router.get('/status', (req, res) => {
+  res.json(buildFullStatus());
 });
 
 /**

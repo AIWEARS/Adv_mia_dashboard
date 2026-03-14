@@ -318,8 +318,13 @@ function TabPerformance({ csvStatusData, onDataUpdate }) {
       const uploadFn = platform === 'google' ? uploadGoogleCsv : uploadMetaCsv;
       const result = await uploadFn(file);
       setUploadMsg(`${result.message} (${result.summary?.righe_processate || 0} righe processate)`);
-      const status = await getCsvStatus();
-      setCsvStatus(status);
+      // Usa lo status incluso nella risposta upload (evita problemi serverless Vercel)
+      if (result.csvStatus) {
+        setCsvStatus(result.csvStatus);
+      } else {
+        const status = await getCsvStatus();
+        setCsvStatus(status);
+      }
       if (onDataUpdate) onDataUpdate();
     } catch (err) {
       setUploadMsg(`Errore: ${err.message}`);
