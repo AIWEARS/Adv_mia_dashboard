@@ -319,61 +319,46 @@ function TabPerformance({ csvStatusData, onDataUpdate }) {
       const result = await uploadFn(file);
       setUploadMsg(`${result.message} (${result.summary?.righe_processate || 0} righe processate)`);
 
-      // Usa csvStatus dal server se disponibile
-      if (result.csvStatus) {
-        setCsvStatus(result.csvStatus);
+      // Usa csvStatus dal server se ha dati validi
+      const serverStatus = result.csvStatus;
+      if (serverStatus?.google?.importato || serverStatus?.meta?.importato) {
+        setCsvStatus(serverStatus);
       } else {
-        // Fallback: prova GET status, e se non funziona costruisci da upload result
-        try {
-          const status = await getCsvStatus();
-          if (status?.google?.importato || status?.meta?.importato) {
-            setCsvStatus(status);
-          } else {
-            // Costruisci status minimo dai dati dell'upload
-            const s = result.summary || {};
-            const camps = (result.csvStatus?.campagne) || (result.campaigns || []).map(c => ({
-              ...c,
-              piattaforma: platform === 'google' ? 'Google Ads' : 'Meta Ads',
-              ctr: c.impressioni > 0 ? parseFloat((c.click / c.impressioni * 100).toFixed(2)) : 0,
-              cpc: c.click > 0 ? parseFloat((c.spesa / c.click).toFixed(2)) : 0,
-              cpl: c.conversioni > 0 ? parseFloat((c.spesa / c.conversioni).toFixed(2)) : 0,
-            }));
-            const totSpesa = camps.reduce((a, c) => a + (c.spesa || 0), 0);
-            const totClick = camps.reduce((a, c) => a + (c.click || 0), 0);
-            const totImpr = camps.reduce((a, c) => a + (c.impressioni || 0), 0);
-            const totConv = camps.reduce((a, c) => a + (c.conversioni || 0), 0);
-            setCsvStatus(prev => ({
-              ...prev,
-              [platform === 'google' ? 'google' : 'meta']: {
-                importato: true,
-                campagne: s.campagne || camps.length,
-                spesa_totale: s.spesa_totale || totSpesa,
-                periodo: s.periodo || null,
-              },
-              campagne: camps,
-              totali: {
-                spesa: totSpesa,
-                click: totClick,
-                impressioni: totImpr,
-                conversioni: totConv,
-                ctr: totImpr > 0 ? parseFloat((totClick / totImpr * 100).toFixed(2)) : 0,
-                cpc: totClick > 0 ? parseFloat((totSpesa / totClick).toFixed(2)) : 0,
-                cpl: totConv > 0 ? parseFloat((totSpesa / totConv).toFixed(2)) : 0,
-              },
-            }));
-          }
-        } catch {
-          // Se anche il GET fallisce, costruisci dal risultato upload
-          setCsvStatus(prev => ({
-            ...prev,
-            [platform === 'google' ? 'google' : 'meta']: {
-              importato: true,
-              campagne: result.summary?.campagne || 0,
-              spesa_totale: result.summary?.spesa_totale || 0,
-              periodo: result.summary?.periodo || null,
-            },
-          }));
-        }
+        // Costruisci status client-side dal summary dell'upload
+        const s = result.summary || {};
+        const platKey = platform === 'google' ? 'google' : 'meta';
+        setCsvStatus(prev => {
+          const updated = { ...(prev || {}) };
+          updated[platKey] = {
+            importato: true,
+            campagne: s.campagne || 0,
+            spesa_totale: s.spesa_totale || 0,
+            periodo: s.periodo || null,
+          };
+          // Costruisci campagne e totali dal summary
+          const campagna = {
+            nome: platform === 'google' ? 'Google Ads (importato)' : 'Meta Ads (importato)',
+            piattaforma: platform === 'google' ? 'Google Ads' : 'Meta Ads',
+            spesa: s.spesa_totale || 0,
+            click: s.click_totali || 0,
+            impressioni: s.impressioni_totali || 0,
+            conversioni: 0,
+            ctr: (s.impressioni_totali || 0) > 0 ? parseFloat(((s.click_totali || 0) / s.impressioni_totali * 100).toFixed(2)) : 0,
+            cpc: (s.click_totali || 0) > 0 ? parseFloat(((s.spesa_totale || 0) / s.click_totali).toFixed(2)) : 0,
+            cpl: 0,
+          };
+          updated.campagne = [campagna];
+          updated.totali = {
+            spesa: campagna.spesa,
+            click: campagna.click,
+            impressioni: campagna.impressioni,
+            conversioni: 0,
+            ctr: campagna.ctr,
+            cpc: campagna.cpc,
+            cpl: 0,
+          };
+          return updated;
+        });
       }
       if (onDataUpdate) onDataUpdate();
     } catch (err) {
