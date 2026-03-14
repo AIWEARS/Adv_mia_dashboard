@@ -190,7 +190,7 @@ function BenchmarkLegend() {
         Sotto la media
       </span>
       <span className="text-slate-300">|</span>
-      <span>Benchmark: CTR &gt;2% | CPC &lt;2\u20ac | CPL &lt;80\u20ac</span>
+      <span>Benchmark: CTR &gt;2% | CPC &lt;2€ | CPL &lt;80€</span>
     </div>
   );
 }
@@ -421,7 +421,7 @@ function TabPerformance({ csvStatusData, onDataUpdate }) {
               {csvStatus?.google?.importato ? (
                 <div className="text-xs text-slate-500 mb-2 space-y-0.5">
                   <p><strong>{csvStatus.google.campagne}</strong> campagne importate</p>
-                  <p>Spesa totale: <strong>{csvStatus.google.spesa_totale?.toFixed(2)} \u20ac</strong></p>
+                  <p>Spesa totale: <strong>{csvStatus.google.spesa_totale?.toFixed(2)} €</strong></p>
                   {csvStatus.google.periodo?.inizio && (
                     <p>Periodo: {csvStatus.google.periodo.inizio} &rarr; {csvStatus.google.periodo.fine}</p>
                   )}
@@ -464,7 +464,7 @@ function TabPerformance({ csvStatusData, onDataUpdate }) {
               {csvStatus?.meta?.importato ? (
                 <div className="text-xs text-slate-500 mb-2 space-y-0.5">
                   <p><strong>{csvStatus.meta.campagne}</strong> campagne importate</p>
-                  <p>Spesa totale: <strong>{csvStatus.meta.spesa_totale?.toFixed(2)} \u20ac</strong></p>
+                  <p>Spesa totale: <strong>{csvStatus.meta.spesa_totale?.toFixed(2)} €</strong></p>
                   {csvStatus.meta.periodo?.inizio && (
                     <p>Periodo: {csvStatus.meta.periodo.inizio} &rarr; {csvStatus.meta.periodo.fine}</p>
                   )}
@@ -668,7 +668,7 @@ function TabPerformance({ csvStatusData, onDataUpdate }) {
                           <VerdictBadge campaign={camp} />
                         </td>
                         <td className="px-3 py-3 text-sm text-right font-medium text-slate-700">
-                          {camp.spesa.toFixed(2)} \u20ac
+                          {camp.spesa.toFixed(2)} €
                         </td>
                         <td className="px-3 py-3 text-sm text-right text-slate-600">
                           {camp.impressioni.toLocaleString('it-IT')}
@@ -689,7 +689,7 @@ function TabPerformance({ csvStatusData, onDataUpdate }) {
                       <td className="px-4 py-3 text-sm text-slate-700">TOTALE</td>
                       <td className="px-3 py-3" />
                       <td className="px-3 py-3 text-sm text-right text-slate-800">
-                        {totali.spesa?.toFixed(2)} \u20ac
+                        {totali.spesa?.toFixed(2)} €
                       </td>
                       <td className="px-3 py-3 text-sm text-right text-slate-700">
                         {totali.impressioni?.toLocaleString('it-IT')}
