@@ -314,6 +314,8 @@ function parseGoogleAdsCsv(content) {
   let startIndex = 0;
   for (let i = 0; i < Math.min(lines.length, 20); i++) {
     const line = lines[i].trim().toLowerCase();
+    // La riga header deve avere almeno una virgola (piu colonne CSV)
+    if (!line.includes(',')) continue;
     // Cerca la riga header che contiene nomi di colonna tipici
     if (line.includes('campaign') || line.includes('campagna') ||
         line.includes('cost') || line.includes('costo') ||
