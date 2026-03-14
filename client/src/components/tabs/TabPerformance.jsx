@@ -113,7 +113,7 @@ function MetricCell({ value, metricKey, format = 'numero' }) {
 
   let display = '-';
   if (value !== null && value !== undefined && value !== 0) {
-    if (format === 'euro') display = `${Number(value).toFixed(2)} \u20ac`;
+    if (format === 'euro') display = `${Number(value).toFixed(2)} €`;
     else if (format === 'percentuale') display = `${Number(value).toFixed(2)}%`;
     else display = Number(value).toLocaleString('it-IT');
   }
@@ -155,7 +155,7 @@ function SummaryCard({ icon: Icon, label, value, format, subtitle, color = 'blue
   };
 
   let display = value;
-  if (format === 'euro') display = `${Number(value).toFixed(2)} \u20ac`;
+  if (format === 'euro') display = `${Number(value).toFixed(2)} €`;
   else if (format === 'percentuale') display = `${Number(value).toFixed(2)}%`;
   else if (format === 'numero') display = Number(value).toLocaleString('it-IT');
 
@@ -300,13 +300,21 @@ function TabPerformance({ csvStatusData, onDataUpdate }) {
   const [filterPlatform, setFilterPlatform] = useState('all');
 
   useEffect(() => {
-    if (!csvStatusData) {
+    if (csvStatusData) {
+      setCsvStatus(csvStatusData);
+      setLoading(false);
+    } else if (!csvStatus) {
+      // Solo al primo mount, prova a caricare dal server
       setLoading(true);
       getCsvStatus()
-        .then(data => { setCsvStatus(data); setLoading(false); })
+        .then(data => {
+          // Usa i dati dal server solo se hanno contenuto (su Vercel potrebbe essere vuoto)
+          if (data?.google?.importato || data?.meta?.importato) {
+            setCsvStatus(data);
+          }
+          setLoading(false);
+        })
         .catch(() => setLoading(false));
-    } else {
-      setCsvStatus(csvStatusData);
     }
   }, [csvStatusData]);
 
@@ -319,48 +327,48 @@ function TabPerformance({ csvStatusData, onDataUpdate }) {
       const result = await uploadFn(file);
       setUploadMsg(`${result.message} (${result.summary?.righe_processate || 0} righe processate)`);
 
-      // Usa csvStatus dal server se ha dati validi
+      // Usa csvStatus dal server (stesso processo, ha i dati in memoria)
       const serverStatus = result.csvStatus;
+      let newStatus;
       if (serverStatus?.google?.importato || serverStatus?.meta?.importato) {
-        setCsvStatus(serverStatus);
+        newStatus = serverStatus;
       } else {
-        // Costruisci status client-side dal summary dell'upload
+        // Fallback: costruisci status client-side dal summary dell'upload
         const s = result.summary || {};
         const platKey = platform === 'google' ? 'google' : 'meta';
-        setCsvStatus(prev => {
-          const updated = { ...(prev || {}) };
-          updated[platKey] = {
-            importato: true,
-            campagne: s.campagne || 0,
-            spesa_totale: s.spesa_totale || 0,
-            periodo: s.periodo || null,
-          };
-          // Costruisci campagne e totali dal summary
-          const campagna = {
-            nome: platform === 'google' ? 'Google Ads (importato)' : 'Meta Ads (importato)',
-            piattaforma: platform === 'google' ? 'Google Ads' : 'Meta Ads',
-            spesa: s.spesa_totale || 0,
-            click: s.click_totali || 0,
-            impressioni: s.impressioni_totali || 0,
-            conversioni: 0,
-            ctr: (s.impressioni_totali || 0) > 0 ? parseFloat(((s.click_totali || 0) / s.impressioni_totali * 100).toFixed(2)) : 0,
-            cpc: (s.click_totali || 0) > 0 ? parseFloat(((s.spesa_totale || 0) / s.click_totali).toFixed(2)) : 0,
-            cpl: 0,
-          };
-          updated.campagne = [campagna];
-          updated.totali = {
-            spesa: campagna.spesa,
-            click: campagna.click,
-            impressioni: campagna.impressioni,
-            conversioni: 0,
-            ctr: campagna.ctr,
-            cpc: campagna.cpc,
-            cpl: 0,
-          };
-          return updated;
-        });
+        const prev = csvStatus || {};
+        newStatus = { ...prev };
+        newStatus[platKey] = {
+          importato: true,
+          campagne: s.campagne || 0,
+          spesa_totale: s.spesa_totale || 0,
+          periodo: s.periodo || null,
+        };
+        const campagna = {
+          nome: platform === 'google' ? 'Google Ads (importato)' : 'Meta Ads (importato)',
+          piattaforma: platform === 'google' ? 'Google Ads' : 'Meta Ads',
+          spesa: s.spesa_totale || 0,
+          click: s.click_totali || 0,
+          impressioni: s.impressioni_totali || 0,
+          conversioni: 0,
+          ctr: (s.impressioni_totali || 0) > 0 ? parseFloat(((s.click_totali || 0) / s.impressioni_totali * 100).toFixed(2)) : 0,
+          cpc: (s.click_totali || 0) > 0 ? parseFloat(((s.spesa_totale || 0) / s.click_totali).toFixed(2)) : 0,
+          cpl: 0,
+        };
+        newStatus.campagne = [campagna];
+        newStatus.totali = {
+          spesa: campagna.spesa,
+          click: campagna.click,
+          impressioni: campagna.impressioni,
+          conversioni: 0,
+          ctr: campagna.ctr,
+          cpc: campagna.cpc,
+          cpl: 0,
+        };
       }
-      if (onDataUpdate) onDataUpdate();
+      setCsvStatus(newStatus);
+      // Passa i dati al parent per evitare che li ri-chieda al server (Vercel stateless)
+      if (onDataUpdate) onDataUpdate(newStatus);
     } catch (err) {
       setUploadMsg(`Errore: ${err.message}`);
     } finally {
@@ -372,9 +380,9 @@ function TabPerformance({ csvStatusData, onDataUpdate }) {
     try {
       await deleteCsvData();
       setUploadMsg('Dati CSV cancellati.');
-      const status = await getCsvStatus();
-      setCsvStatus(status);
-      if (onDataUpdate) onDataUpdate();
+      const emptyStatus = { google: { importato: false }, meta: { importato: false }, campagne: [], totali: {} };
+      setCsvStatus(emptyStatus);
+      if (onDataUpdate) onDataUpdate(emptyStatus);
     } catch (err) {
       setUploadMsg(`Errore: ${err.message}`);
     }
@@ -757,14 +765,14 @@ function TabPerformance({ csvStatusData, onDataUpdate }) {
                 problemi.push({
                   gravita: 'critica',
                   titolo: `"${c.nome}" sta bruciando budget`,
-                  desc: `Spesi ${c.spesa.toFixed(2)}\u20ac senza conversioni. Spegni o rivedi completamente targeting e creativita.`,
+                  desc: `Spesi ${c.spesa.toFixed(2)}€ senza conversioni. Spegni o rivedi completamente targeting e creativita.`,
                   campagna: c.nome
                 });
               } else if (v.verdict === 'critica') {
                 problemi.push({
                   gravita: 'alta',
                   titolo: `"${c.nome}" ha performance critiche`,
-                  desc: `CTR: ${c.ctr}% ${c.ctr < 1 ? '(troppo basso)' : ''} | CPC: ${c.cpc.toFixed(2)}\u20ac ${c.cpc > 4 ? '(troppo alto)' : ''} | CPL: ${c.cpl > 0 ? c.cpl.toFixed(2) + '\u20ac' : 'N/A'}. Serve intervento urgente.`,
+                  desc: `CTR: ${c.ctr}% ${c.ctr < 1 ? '(troppo basso)' : ''} | CPC: ${c.cpc.toFixed(2)}€ ${c.cpc > 4 ? '(troppo alto)' : ''} | CPL: ${c.cpl > 0 ? c.cpl.toFixed(2) + '€' : 'N/A'}. Serve intervento urgente.`,
                   campagna: c.nome
                 });
               }
@@ -773,7 +781,7 @@ function TabPerformance({ csvStatusData, onDataUpdate }) {
               problemi.unshift({
                 gravita: 'critica',
                 titolo: 'Nessuna conversione registrata',
-                desc: `Hai speso ${totali.spesa.toFixed(2)}\u20ac senza alcuna conversione. Verifica: 1) Il pixel/tag di conversione e' installato? 2) L'evento di conversione scatta correttamente? 3) La landing page ha un form/CTA funzionante?`,
+                desc: `Hai speso ${totali.spesa.toFixed(2)}€ senza alcuna conversione. Verifica: 1) Il pixel/tag di conversione e' installato? 2) L'evento di conversione scatta correttamente? 3) La landing page ha un form/CTA funzionante?`,
               });
             }
             if (totali.ctr > 0 && totali.ctr < 1) {

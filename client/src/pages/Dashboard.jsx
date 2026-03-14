@@ -132,7 +132,7 @@ function Dashboard() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'performance':
-        return <TabPerformance csvStatusData={csvStatus} onDataUpdate={() => { loadData(true); getCsvStatus().then(setCsvStatus).catch(() => {}); }} />;
+        return <TabPerformance csvStatusData={csvStatus} onDataUpdate={(newCsvStatus) => { if (newCsvStatus) setCsvStatus(newCsvStatus); loadData(true); }} />;
       case 'sintesi':
         return <TabSintesi data={summary} />;
       case 'diagnosi':
