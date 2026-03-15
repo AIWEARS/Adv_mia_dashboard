@@ -39,35 +39,50 @@ async function fetchApi(endpoint, options = {}) {
 /**
  * Ottieni il riepilogo generale della diagnosi
  */
-export async function getSummary() {
+export async function getSummary(csvStatus) {
+  if (csvStatus?.google?.importato || csvStatus?.meta?.importato) {
+    return fetchApi('/diagnosis/summary', { method: 'POST', body: JSON.stringify({ csvStatus }) });
+  }
   return fetchApi('/diagnosis/summary');
 }
 
 /**
  * Ottieni i trend temporali delle metriche
  */
-export async function getTrends() {
+export async function getTrends(csvStatus) {
+  if (csvStatus?.google?.importato || csvStatus?.meta?.importato) {
+    return fetchApi('/diagnosis/trends', { method: 'POST', body: JSON.stringify({ csvStatus }) });
+  }
   return fetchApi('/diagnosis/trends');
 }
 
 /**
  * Ottieni la diagnosi dettagliata con problemi e suggerimenti
  */
-export async function getDiagnosis() {
+export async function getDiagnosis(csvStatus) {
+  if (csvStatus?.google?.importato || csvStatus?.meta?.importato) {
+    return fetchApi('/diagnosis', { method: 'POST', body: JSON.stringify({ csvStatus }) });
+  }
   return fetchApi('/diagnosis');
 }
 
 /**
  * Ottieni il piano di azione a 7 giorni
  */
-export async function getActionPlan7() {
+export async function getActionPlan7(csvStatus) {
+  if (csvStatus?.google?.importato || csvStatus?.meta?.importato) {
+    return fetchApi('/action-plan/7', { method: 'POST', body: JSON.stringify({ csvStatus }) });
+  }
   return fetchApi('/action-plan/7');
 }
 
 /**
  * Ottieni il piano di azione a 30 giorni
  */
-export async function getActionPlan30() {
+export async function getActionPlan30(csvStatus) {
+  if (csvStatus?.google?.importato || csvStatus?.meta?.importato) {
+    return fetchApi('/action-plan/30', { method: 'POST', body: JSON.stringify({ csvStatus }) });
+  }
   return fetchApi('/action-plan/30');
 }
 

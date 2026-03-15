@@ -2,7 +2,12 @@ import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { actionPlan7Data, actionPlan30Data } from '../data/mockData.js';
 import { generateActionPlan, isGeminiAvailable, buildMockUnified } from '../services/geminiService.js';
-import { getUnifiedData } from '../services/dataStore.js';
+import { getUnifiedData, unifiedFromCsvStatus } from '../services/dataStore.js';
+
+function getUnified(req) {
+  if (req.body?.csvStatus) return unifiedFromCsvStatus(req.body.csvStatus);
+  return getUnifiedData();
+}
 
 const router = express.Router();
 
@@ -30,10 +35,10 @@ function applyCompletionState(plan, planType) {
   };
 }
 
-// GET /api/action-plan/7 - Piano 7 giorni
-router.get('/7', authenticateToken, async (req, res) => {
+// Handler piano 7 giorni (riusato da GET e POST)
+async function handlePlan7(req, res) {
   try {
-    const unified = getUnifiedData();
+    const unified = getUnified(req);
     const dataForAI = unified || buildMockUnified();
 
     if (isGeminiAvailable()) {
@@ -47,12 +52,12 @@ router.get('/7', authenticateToken, async (req, res) => {
     console.error('[ActionPlan7] Error:', error.message);
     res.json(applyCompletionState(staticPlans['7'], '7'));
   }
-});
+}
 
-// GET /api/action-plan/30 - Piano 30 giorni
-router.get('/30', authenticateToken, async (req, res) => {
+// Handler piano 30 giorni (riusato da GET e POST)
+async function handlePlan30(req, res) {
   try {
-    const unified = getUnifiedData();
+    const unified = getUnified(req);
     const dataForAI = unified || buildMockUnified();
 
     if (isGeminiAvailable()) {
@@ -66,7 +71,13 @@ router.get('/30', authenticateToken, async (req, res) => {
     console.error('[ActionPlan30] Error:', error.message);
     res.json(applyCompletionState(staticPlans['30'], '30'));
   }
-});
+}
+
+router.get('/7', authenticateToken, handlePlan7);
+router.post('/7', authenticateToken, handlePlan7);
+
+router.get('/30', authenticateToken, handlePlan30);
+router.post('/30', authenticateToken, handlePlan30);
 
 // PATCH /api/action-plan/:type/toggle/:id - Segna azione come completata/non completata
 router.patch('/:type/toggle/:id', authenticateToken, (req, res) => {

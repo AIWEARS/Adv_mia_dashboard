@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   BarChart3,
   AlertTriangle,
-  Calendar,
-  CalendarDays,
   Users,
   Shield,
   Target,
@@ -17,18 +15,14 @@ import {
 import {
   getSummary,
   getDiagnosis,
-  getActionPlan7,
-  getActionPlan30,
   getCompetitors,
   getTrackingHealth,
-  toggleAction,
   getCsvStatus,
 } from '../utils/api';
 
 // Tab components
 import TabSintesi from '../components/tabs/TabSintesi';
 import TabDiagnosi from '../components/tabs/TabDiagnosi';
-import TabPiano from '../components/tabs/TabPiano';
 import TabCompetitor from '../components/tabs/TabCompetitor';
 import TabSalute from '../components/tabs/TabSalute';
 import TabPerformance from '../components/tabs/TabPerformance';
@@ -39,8 +33,6 @@ const TABS = [
   { id: 'performance', label: 'Performance ADV', icon: BarChart3 },
   { id: 'sintesi', label: 'Sintesi', icon: BarChart3 },
   { id: 'diagnosi', label: 'Cosa Migliorare', icon: AlertTriangle },
-  { id: 'piano7', label: 'Piano 7 Giorni', icon: Calendar },
-  { id: 'piano30', label: 'Piano 30 Giorni', icon: CalendarDays },
   { id: 'competitor', label: 'Competitor', icon: Users },
   { id: 'salute', label: 'Salute Tracciamento', icon: Shield },
   { id: 'leads', label: 'Lead Pipeline', icon: Target },
@@ -56,15 +48,30 @@ function Dashboard() {
   // Dati per ogni tab
   const [summary, setSummary] = useState(null);
   const [diagnosis, setDiagnosis] = useState(null);
-  const [plan7, setPlan7] = useState(null);
-  const [plan30, setPlan30] = useState(null);
   const [competitors, setCompetitors] = useState(null);
   const [trackingHealth, setTrackingHealth] = useState(null);
 
-  // CSV Status (usato per header indicator)
-  const [csvStatus, setCsvStatus] = useState(null);
+  // CSV Status (persistito in localStorage per sopravvivere ai reload su Vercel)
+  const [csvStatus, setCsvStatusRaw] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mia_csvStatus');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
 
-  const loadData = useCallback(async (isRefresh = false) => {
+  // Wrapper che salva anche in localStorage
+  const setCsvStatus = useCallback((data) => {
+    setCsvStatusRaw(data);
+    try {
+      if (data && (data.google?.importato || data.meta?.importato)) {
+        localStorage.setItem('mia_csvStatus', JSON.stringify(data));
+      } else {
+        localStorage.removeItem('mia_csvStatus');
+      }
+    } catch { /* localStorage non disponibile */ }
+  }, []);
+
+  const loadData = useCallback(async (isRefresh = false, csvData = null) => {
     if (isRefresh) {
       setRefreshing(true);
     } else {
@@ -72,21 +79,20 @@ function Dashboard() {
     }
     setError('');
 
+    // Usa csvData passato o csvStatus corrente dal ref
+    const csv = csvData || csvStatusRef.current;
+
     try {
-      const [summaryData, diagnosisData, plan7Data, plan30Data, competitorsData, trackingData] =
+      const [summaryData, diagnosisData, competitorsData, trackingData] =
         await Promise.allSettled([
-          getSummary(),
-          getDiagnosis(),
-          getActionPlan7(),
-          getActionPlan30(),
+          getSummary(csv),
+          getDiagnosis(csv),
           getCompetitors(),
           getTrackingHealth(),
         ]);
 
       if (summaryData.status === 'fulfilled') setSummary(summaryData.value);
       if (diagnosisData.status === 'fulfilled') setDiagnosis(diagnosisData.value);
-      if (plan7Data.status === 'fulfilled') setPlan7(plan7Data.value);
-      if (plan30Data.status === 'fulfilled') setPlan30(plan30Data.value);
       if (competitorsData.status === 'fulfilled') setCompetitors(competitorsData.value);
       if (trackingData.status === 'fulfilled') setTrackingHealth(trackingData.value);
     } catch (err) {
@@ -97,50 +103,22 @@ function Dashboard() {
     }
   }, []);
 
+  // Ref per accedere a csvStatus corrente dentro loadData senza dipendenza
+  const csvStatusRef = useRef(csvStatus);
+  useEffect(() => { csvStatusRef.current = csvStatus; }, [csvStatus]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Carica stato CSV all'avvio
-  useEffect(() => {
-    getCsvStatus().then(setCsvStatus).catch(() => {});
-  }, []);
-
-  const handleToggleAction = async (planType, actionId) => {
-    try {
-      const result = await toggleAction(planType, actionId);
-      if (planType === '7') {
-        setPlan7((prev) => ({
-          ...prev,
-          actions: prev.actions.map((a) =>
-            a.id === actionId ? { ...a, completed: !a.completed } : a
-          ),
-        }));
-      } else {
-        setPlan30((prev) => ({
-          ...prev,
-          actions: prev.actions.map((a) =>
-            a.id === actionId ? { ...a, completed: !a.completed } : a
-          ),
-        }));
-      }
-    } catch (err) {
-      setError('Errore nell\'aggiornamento dell\'azione.');
-    }
-  };
-
   const renderTabContent = () => {
     switch (activeTab) {
       case 'performance':
-        return <TabPerformance csvStatusData={csvStatus} onDataUpdate={(newCsvStatus) => { if (newCsvStatus) setCsvStatus(newCsvStatus); loadData(true); }} />;
+        return <TabPerformance csvStatusData={csvStatus} onDataUpdate={(newCsvStatus) => { if (newCsvStatus) setCsvStatus(newCsvStatus); loadData(true, newCsvStatus); }} />;
       case 'sintesi':
         return <TabSintesi data={summary} />;
       case 'diagnosi':
         return <TabDiagnosi data={diagnosis} />;
-      case 'piano7':
-        return <TabPiano data={plan7} planType="7" onToggle={handleToggleAction} />;
-      case 'piano30':
-        return <TabPiano data={plan30} planType="30" onToggle={handleToggleAction} />;
       case 'competitor':
         return <TabCompetitor data={competitors} onDataUpdate={(newData) => setCompetitors(newData)} />;
       case 'salute':

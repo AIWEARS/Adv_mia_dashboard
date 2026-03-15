@@ -1,7 +1,24 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { summaryData, diagnosisData, trendsData } from '../data/mockData.js';
-import { getUnifiedData, getActiveSource } from '../services/dataStore.js';
+import { getUnifiedData, getActiveSource, unifiedFromCsvStatus } from '../services/dataStore.js';
+
+// Helper: ottieni dati unificati dal body (POST dal client) o dalla memoria
+function getUnified(req) {
+  // Su Vercel: il client invia csvStatus nel body
+  if (req.body?.csvStatus) {
+    return unifiedFromCsvStatus(req.body.csvStatus);
+  }
+  // Locale / in-memory: usa il dataStore
+  return getUnifiedData();
+}
+
+function getSource(req) {
+  if (req.body?.csvStatus?.google?.importato || req.body?.csvStatus?.meta?.importato) {
+    return 'csv';
+  }
+  return getActiveSource();
+}
 import { generateDiagnosis, generateCompetitorAnalysis, generateMetricComments, isGeminiAvailable, buildMockUnified } from '../services/geminiService.js';
 
 const router = express.Router();
@@ -178,50 +195,46 @@ function buildDiagnosisFromUnified(unified) {
       motivazione: 'Concentrare il budget sulle campagne che convertono riduce il CPL medio'
     } : null,
     suggerimenti: azioni_immediate.map((a, idx) => ({ id: `sug_${idx}`, titolo: a.titolo, descrizione: a.descrizione })),
-    fonte: getActiveSource(),
+    fonte: 'csv',
     ultimo_aggiornamento: new Date().toISOString()
   };
 }
 
-// GET /api/diagnosis - Diagnosi completa con competitor insights
-router.get('/', authenticateToken, async (req, res) => {
+// Handler diagnosi (riusato da GET e POST)
+async function handleDiagnosis(req, res) {
   try {
-    const unified = getUnifiedData();
+    const unified = getUnified(req);
     const dataForAI = unified || buildMockUnified();
 
     if (isGeminiAvailable()) {
-      // Fetch competitor data (non blocca se fallisce)
       const competitorData = await getCompetitorDataForDiagnosis();
-
       const aiResult = await generateDiagnosis(dataForAI, competitorData);
       if (aiResult) {
-        aiResult.fonte = unified ? getActiveSource() : 'demo';
+        aiResult.fonte = unified ? getSource(req) : 'demo';
         return res.json(aiResult);
       }
     }
 
-    // Fallback: rule-based o mock statico
     if (unified) {
       return res.json(buildDiagnosisFromUnified(unified));
     }
     res.json(diagnosisData);
   } catch (error) {
     console.error('[Diagnosis] Error:', error.message);
-    const unified = getUnifiedData();
+    const unified = getUnified(req);
     if (unified) {
       res.json(buildDiagnosisFromUnified(unified));
     } else {
       res.json(diagnosisData);
     }
   }
-});
+}
 
-// GET /api/diagnosis/summary - Riepilogo metriche per tab Sintesi
-router.get('/summary', authenticateToken, async (req, res) => {
+// Handler summary (riusato da GET e POST)
+async function handleSummary(req, res) {
   try {
-    const unified = getUnifiedData();
+    const unified = getUnified(req);
     if (!unified) {
-      // Demo mode - prova commenti AI sui mock
       if (isGeminiAvailable()) {
         const comments = await generateMetricComments(buildMockUnified());
         if (comments) {
@@ -236,7 +249,6 @@ router.get('/summary', authenticateToken, async (req, res) => {
       return res.json(summaryData);
     }
 
-    // Costruisci summary dai dati unificati
     const totalLeads = unified.conversioni.lead_preventivo || 0;
     const totalSpend = unified.spesa_totale || 0;
     const cpl = totalLeads > 0 ? totalSpend / totalLeads : 0;
@@ -254,18 +266,17 @@ router.get('/summary', authenticateToken, async (req, res) => {
       periodo: 'Dati correnti',
       metrics: [
         { id: 'spesa_totale', label: 'Spesa pubblicitaria totale', value: totalSpend, format: 'euro', trend: null, nota: `Google: ${unified.spesa_google.toFixed(0)} euro, Meta: ${unified.spesa_meta.toFixed(0)} euro` },
-        { id: 'lead', label: 'Richieste preventivo (lead)', value: totalLeads, format: 'numero', trend: null, nota: 'Click su mailto:info@itsmia.it' },
+        { id: 'lead', label: 'Richieste preventivo (lead)', value: totalLeads, format: 'numero', trend: null, nota: totalLeads > 0 ? `${totalSpend.toFixed(0)} euro / ${totalLeads} lead` : 'Nessun lead' },
         { id: 'costo_per_lead', label: 'Costo per lead', value: parseFloat(cpl.toFixed(2)), format: 'euro', trend: null, nota: totalLeads > 0 ? `${totalSpend.toFixed(0)} euro / ${totalLeads} lead` : 'Nessun lead' },
-        { id: 'click_webapp', label: 'Click verso la web app', value: unified.conversioni.click_webapp || 0, format: 'numero', trend: null, nota: 'Click verso app.miafashion.it' },
-        { id: 'registrazioni', label: 'Registrazioni', value: unified.conversioni.registrazioni || 0, format: 'numero', trend: null, nota: 'Evento sign_up' },
-        { id: 'acquisti', label: 'Acquisti', value: unified.conversioni.acquisti || 0, format: 'numero', trend: null, nota: 'Evento purchase' },
+        { id: 'click_webapp', label: 'Click verso la web app', value: unified.conversioni.click_webapp || 0, format: 'numero', trend: null, nota: '' },
+        { id: 'registrazioni', label: 'Registrazioni', value: unified.conversioni.registrazioni || 0, format: 'numero', trend: null, nota: '' },
+        { id: 'acquisti', label: 'Acquisti', value: unified.conversioni.acquisti || 0, format: 'numero', trend: null, nota: '' },
         { id: 'ctr', label: 'CTR medio', value: parseFloat(unified.ctr_medio.toFixed(2)), format: 'percentuale', trend: null, nota: 'Media tutte le campagne' },
-        { id: 'roas', label: 'ROAS', value: unified.roas || 0, format: 'moltiplicatore', trend: null, nota: 'Ritorno sulla spesa pubblicitaria' }
+        { id: 'roas', label: 'ROAS', value: unified.roas || 0, format: 'moltiplicatore', trend: null, nota: '' }
       ],
-      fonte: getActiveSource()
+      fonte: getSource(req)
     };
 
-    // Arricchisci con commenti AI
     if (isGeminiAvailable()) {
       const comments = await generateMetricComments(unified);
       if (comments) {
@@ -279,10 +290,9 @@ router.get('/summary', authenticateToken, async (req, res) => {
     res.json(summaryResponse);
   } catch (error) {
     console.error('[Summary] Error:', error.message);
-    const unified = getUnifiedData();
+    const unified = getUnified(req);
     if (!unified) return res.json(summaryData);
 
-    // Fallback minimo senza AI
     const totalLeads = unified.conversioni.lead_preventivo || 0;
     const totalSpend = unified.spesa_totale || 0;
     const cpl = totalLeads > 0 ? totalSpend / totalLeads : 0;
@@ -290,25 +300,22 @@ router.get('/summary', authenticateToken, async (req, res) => {
       score: 50,
       periodo: 'Dati correnti',
       metrics: [
-        { id: 'spesa_totale', label: 'Spesa pubblicitaria totale', value: totalSpend, format: 'euro', trend: null, nota: `Google: ${unified.spesa_google.toFixed(0)} euro, Meta: ${unified.spesa_meta.toFixed(0)} euro` },
+        { id: 'spesa_totale', label: 'Spesa pubblicitaria totale', value: totalSpend, format: 'euro', trend: null, nota: '' },
         { id: 'lead', label: 'Richieste preventivo (lead)', value: totalLeads, format: 'numero', trend: null, nota: '' },
         { id: 'costo_per_lead', label: 'Costo per lead', value: parseFloat(cpl.toFixed(2)), format: 'euro', trend: null, nota: '' },
-        { id: 'click_webapp', label: 'Click verso la web app', value: unified.conversioni.click_webapp || 0, format: 'numero', trend: null, nota: '' },
-        { id: 'registrazioni', label: 'Registrazioni', value: unified.conversioni.registrazioni || 0, format: 'numero', trend: null, nota: '' },
-        { id: 'acquisti', label: 'Acquisti', value: unified.conversioni.acquisti || 0, format: 'numero', trend: null, nota: '' },
         { id: 'ctr', label: 'CTR medio', value: parseFloat(unified.ctr_medio.toFixed(2)), format: 'percentuale', trend: null, nota: '' },
         { id: 'roas', label: 'ROAS', value: unified.roas || 0, format: 'moltiplicatore', trend: null, nota: '' }
       ],
-      fonte: getActiveSource()
+      fonte: getSource(req)
     });
   }
-});
+}
 
-// GET /api/diagnosis/trends - Trend temporali (nessuna AI, solo dati)
-router.get('/trends', authenticateToken, (req, res) => {
+// Handler trends (riusato da GET e POST)
+function handleTrends(req, res) {
   const { periodo } = req.query;
   const days = parseInt(periodo) || 30;
-  const unified = getUnifiedData();
+  const unified = getUnified(req);
 
   if (!unified) {
     const filteredData = {
@@ -321,8 +328,18 @@ router.get('/trends', authenticateToken, (req, res) => {
   res.json({
     periodo: `Ultimi ${days} giorni`,
     dati_giornalieri: (unified.dati_giornalieri || []).slice(-days),
-    fonte: getActiveSource()
+    fonte: getSource(req)
   });
-});
+}
+
+// GET e POST per ogni endpoint (POST per Vercel serverless)
+router.get('/', authenticateToken, handleDiagnosis);
+router.post('/', authenticateToken, handleDiagnosis);
+
+router.get('/summary', authenticateToken, handleSummary);
+router.post('/summary', authenticateToken, handleSummary);
+
+router.get('/trends', authenticateToken, handleTrends);
+router.post('/trends', authenticateToken, handleTrends);
 
 export default router;

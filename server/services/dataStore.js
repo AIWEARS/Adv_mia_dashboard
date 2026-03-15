@@ -390,6 +390,63 @@ export function disconnectGA4() {
   saveStore();
 }
 
+// ---------- CONVERSIONE csvStatus -> unified ----------
+
+/**
+ * Converte il formato csvStatus (dal client) nel formato unified usato dalle route di diagnosi.
+ * Permette alle route su Vercel di ricevere i dati dal client invece che dalla memoria.
+ */
+export function unifiedFromCsvStatus(csvStatus) {
+  if (!csvStatus) return null;
+  if (!csvStatus.google?.importato && !csvStatus.meta?.importato) return null;
+
+  const campagne = (csvStatus.campagne || []).map(c => ({
+    piattaforma: c.piattaforma || 'Google Ads',
+    nome: c.nome || 'Campagna',
+    spesa: c.spesa || 0,
+    click: c.click || 0,
+    impressioni: c.impressioni || 0,
+    conversioni: { lead: c.conversioni || 0, go_to_app: 0 }
+  }));
+
+  const totali = csvStatus.totali || {};
+  const spesaGoogle = (csvStatus.campagne || [])
+    .filter(c => c.piattaforma === 'Google Ads')
+    .reduce((s, c) => s + (c.spesa || 0), 0);
+  const spesaMeta = (csvStatus.campagne || [])
+    .filter(c => c.piattaforma === 'Meta Ads')
+    .reduce((s, c) => s + (c.spesa || 0), 0);
+
+  const totalLeads = totali.conversioni || 0;
+  const totalSpend = totali.spesa || 0;
+
+  return {
+    periodo: csvStatus.google?.periodo || csvStatus.meta?.periodo || { inizio: null, fine: null },
+    spesa_totale: totalSpend,
+    spesa_google: spesaGoogle,
+    spesa_meta: spesaMeta,
+    impressioni_totali: totali.impressioni || 0,
+    click_totali: totali.click || 0,
+    conversioni: {
+      lead_preventivo: totalLeads,
+      click_webapp: 0,
+      registrazioni: 0,
+      acquisti: 0
+    },
+    costo_per_lead: totalLeads > 0 ? totalSpend / totalLeads : 0,
+    ctr_medio: totali.ctr || 0,
+    roas: 0,
+    campagne,
+    dati_giornalieri: (csvStatus.dati_giornalieri || []).map(d => ({
+      data: d.date || d.data,
+      spesa: d.cost || d.spend || d.spesa || 0,
+      click: d.clicks || d.click || 0,
+      impressioni: d.impressions || d.impressioni || 0,
+      lead: d.conversions || d.results || d.lead || 0
+    }))
+  };
+}
+
 // Inizializza al caricamento
 loadStore();
 
